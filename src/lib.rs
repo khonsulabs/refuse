@@ -609,14 +609,6 @@ impl<'a> Tracer<'a> {
                 mark_one_sender: self.mark_one_sender.clone(),
             })
             .expect("marker thread not running");
-
-        //     .by_type
-        //     .get(&key.1)
-        //     .expect("areas are never deallocated")
-        //     .mark_one(self.mark_bit, key.3, key.2)
-        // {
-        //     self.to_trace.push(key);
-        // }
     }
 }
 
@@ -833,7 +825,9 @@ where
             if bin_id.invalid() {
                 break;
             }
-            let slot = &self.slabs[bin_id.slab() as usize].slots[usize::from(bin_id.slot())];
+            let slab = &self.slabs[bin_id.slab() as usize];
+            let slot_index = bin_id.slot();
+            let slot = &slab.slots[usize::from(slot_index)];
             if let Some(generation) = slot.state.try_allocate() {
                 let next = unsafe {
                     let next = (*slot.value.get()).free;
@@ -843,6 +837,11 @@ where
                     next
                 };
                 self.free_head.store(next, Ordering::Release);
+                let _result = slab.last_allocated.fetch_update(
+                    Ordering::Release,
+                    Ordering::Acquire,
+                    |last_allocated| (last_allocated < slot_index).then_some(slot_index),
+                );
                 return (generation, bin_id);
             }
         }
@@ -912,16 +911,25 @@ where
         let mut free_head = BinId(self.free_head.load(Ordering::Acquire));
         let mut allocated = 0;
         for (slab_index, slab) in self.slabs.iter().enumerate() {
-            for (slot_index, slot) in slab.slots.iter().enumerate() {
+            let current_last_allocated = slab.last_allocated.load(Ordering::Acquire);
+            let mut last_allocated = 0;
+            for (slot_index, slot) in slab.slots[0..=usize::from(current_last_allocated)]
+                .iter()
+                .enumerate()
+            {
                 match slot.sweep(mark_bits, free_head) {
                     SlotSweepStatus::Swept => {
                         free_head = BinId::new(slab_index as u32, slot_index as u8);
                     }
                     SlotSweepStatus::Allocated => {
                         allocated += 1;
+                        last_allocated = slot_index as u8;
                     }
                     SlotSweepStatus::NotAllocated => {}
                 }
+            }
+            if last_allocated < current_last_allocated {
+                slab.last_allocated.store(last_allocated, Ordering::Release);
             }
         }
         self.free_head.store(free_head.0, Ordering::Release);
@@ -1278,7 +1286,7 @@ impl SlotState {
         state |= mark_bits << Self::MARK_OFFSET;
 
         self.0.store(state, Ordering::Release);
-        true
+        state & Self::SHOULD_TRACE != 0
     }
 
     fn sweep(&self, mark_bits: u8) -> SlotSweepStatus {
