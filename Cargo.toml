@@ -1,0 +1,37 @@
+[package]
+name = "musegc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ahash = "0.8.11"
+crossbeam-utils = "0.8.19"
+flume = "0.11.0"
+kempt = "0.2.3"
+nanorand = { version = "0.7.0", default-features = false, features = [
+    "std",
+    "wyrand",
+] }
+parking_lot = { version = "0.12.1", features = ["arc_lock"] }
+
+[dev-dependencies]
+criterion = "0.5"
+timings = { path = "../timings" }
+
+[[bench]]
+name = "vs-arc"
+harness = false
+
+[[bench]]
+name = "timings"
+harness = false
+
+[profile.release]
+debug = true
+lto = true
+
+[profile.bench]
+
+lto = true
