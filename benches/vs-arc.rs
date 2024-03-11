@@ -19,19 +19,15 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("arc", |b| b.iter(|| black_box(arc_string())));
     collected(|| {
         group.bench_function("weak", |b| {
-            let mut guard = CollectionGuard::acquire();
-            b.iter(|| {
-                let result = black_box(weak_string(&mut guard));
-                guard.yield_to_collector();
-                result
+            b.iter(move || {
+                let mut guard = CollectionGuard::acquire();
+                black_box(weak_string(&mut guard))
             })
         });
         group.bench_function("strong", |b| {
-            let mut guard = CollectionGuard::acquire();
-            b.iter(|| {
-                let result = black_box(strong_string(&mut guard));
-                guard.yield_to_collector();
-                result
+            b.iter(move || {
+                let mut guard = CollectionGuard::acquire();
+                black_box(strong_string(&mut guard))
             })
         });
     });

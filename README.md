@@ -39,8 +39,8 @@ A `CollectionGuard` is needed to:
 
 ## Safety
 
-**Here Be Dragons**. This crate is missing all safety comments, but passes
-miri tests when provided the flags:
+This crate has safety comments next to each usage of unsafe, but and passes Miri
+tests when provided the flags:
 
 ```sh
 MIRIFLAGS="-Zmiri-permissive-provenance -Zmiri-ignore-leaks" cargo +nightly miri test
@@ -71,11 +71,8 @@ leaks.** Specifically:
 
 ## What's left
 
-- **Safety Documentation**: While Miri passes running examples and tests, this
-  crate's safety model needs to be documented with an overview somewhere that
-  inline safety comments can reference.
-- **Better automatic collector heuristics**: The collector should measure how
-  long it takes to run and use that measurement to scale scheduled collections.
+- **Finalizers**: Currently Drop is executed, but there's no way to attach
+  behavior to run before the object is dropped.
 - **More advanced algorithm**: The current algorithm employed is the naive
   mark-and-sweep. It performs well for smaller sets, but will become slower as
   the memory sets grow larger. Other algorithms may be considered, but the
@@ -90,45 +87,45 @@ comparing the time it takes to allocate each `Arc<[u8; 32]>`, `Strong<[u8;32]>`,
 and `Weak<[u8; 32]>`. The measurements are the amount of time it takes for an
 individual allocation. These results are from running on a Ryzen 3700X.
 
-#### 1 thread
+### 1 thread
 
 | Label  | avg     | min     | max     | stddev  | out%   |
 |--------|---------|---------|---------|---------|--------|
-| Arc    | 44.53ns | 20.00ns | 33.82us | 182.9ns | 0.010% |
-| Strong | 63.27ns | 30.00ns | 442.7us | 1.422us | 0.002% |
-| Weak   | 67.05ns | 30.00ns | 183.1us | 790.9ns | 0.003% |
+| Arc    | 47.87ns | 20.00ns | 11.27us | 151.4ns | 0.010% |
+| Strong | 62.02ns | 30.00ns | 182.2us | 1.367us | 0.000% |
+| Weak   | 65.89ns | 30.00ns | 439.2us | 1.556us | 0.001% |
 
-#### 4 threads
-
-| Label  | avg     | min     | max     | stddev  | out%   |
-|--------|---------|---------|---------|---------|--------|
-| Arc    | 45.08ns | 20.00ns | 11.30us | 135.8ns | 0.010% |
-| Strong | 75.56ns | 30.00ns | 387.7us | 2.330us | 0.000% |
-| Weak   | 71.03ns | 30.00ns | 854.3us | 2.452us | 0.000% |
-
-#### 8 threads
+### 4 threads
 
 | Label  | avg     | min     | max     | stddev  | out%   |
 |--------|---------|---------|---------|---------|--------|
-| Arc    | 49.55ns | 20.00ns | 16.61us | 145.7ns | 0.010% |
-| Strong | 138.5ns | 30.00ns | 854.6us | 5.905us | 0.000% |
-| Weak   | 92.53ns | 30.00ns | 1.418ms | 4.925us | 0.000% |
+| Arc    | 47.21ns | 20.00ns | 5.810us | 138.0ns | 0.010% |
+| Strong | 147.5ns | 30.00ns | 314.4us | 3.849us | 0.001% |
+| Weak   | 71.03ns | 30.00ns | 633.3us | 2.464us | 0.000% |
 
-#### 16 threads
-
-| Label  | avg     | min     | max     | stddev  | out%   |
-|--------|---------|---------|---------|---------|--------|
-| Arc    | 57.23ns | 20.00ns | 255.1us | 352.8ns | 0.010% |
-| Strong | 420.8ns | 30.00ns | 3.133ms | 22.28us | 0.000% |
-| Weak   | 222.6ns | 30.00ns | 3.320ms | 17.23us | 0.000% |
-
-#### 32 threads
+### 8 threads
 
 | Label  | avg     | min     | max     | stddev  | out%   |
 |--------|---------|---------|---------|---------|--------|
-| Arc    | 69.91ns | 20.00ns | 352.2us | 888.3ns | 0.001% |
-| Strong | 1.673us | 30.00ns | 14.64ms | 91.80us | 0.000% |
-| Weak   | 1.084us | 30.00ns | 12.59ms | 79.43us | 0.000% |
+| Arc    | 48.91ns | 20.00ns | 65.56us | 172.4ns | 0.010% |
+| Strong | 186.8ns | 30.00ns | 729.9us | 6.224us | 0.000% |
+| Weak   | 109.4ns | 30.00ns | 1.136ms | 5.817us | 0.000% |
+
+### 16 threads
+
+| Label  | avg     | min     | max     | stddev  | out%   |
+|--------|---------|---------|---------|---------|--------|
+| Arc    | 55.47ns | 20.00ns | 248.9us | 354.6ns | 0.010% |
+| Strong | 323.1ns | 30.00ns | 3.105ms | 18.29us | 0.000% |
+| Weak   | 206.6ns | 30.00ns | 3.492ms | 16.00us | 0.000% |
+
+### 32 threads
+
+| Label  | avg     | min     | max     | stddev  | out%   |
+|--------|---------|---------|---------|---------|--------|
+| Arc    | 67.12ns | 20.00ns | 260.0us | 783.3ns | 0.001% |
+| Strong | 616.7ns | 30.00ns | 11.91ms | 55.58us | 0.000% |
+| Weak   | 432.5ns | 30.00ns | 13.66ms | 49.14us | 0.000% |
 
 ### Author's Benchmark Summary
 

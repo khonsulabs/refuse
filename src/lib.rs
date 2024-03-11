@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::mem::{ManuallyDrop, MaybeUninit};
 use std::num::NonZeroUsize;
 use std::ops::Deref;
+use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -112,6 +113,8 @@ struct Collector {
     next_gc: Option<Instant>,
     pause_failures: u8,
     rng: WyRand,
+    average_collection: Duration,
+    average_collection_locking: Duration,
 }
 
 impl Collector {
@@ -125,6 +128,8 @@ impl Collector {
             next_gc: None,
             pause_failures: 0,
             rng: WyRand::new(),
+            average_collection: Duration::from_millis(1),
+            average_collection_locking: Duration::from_millis(1),
         }
     }
 
@@ -208,7 +213,7 @@ impl Collector {
                         }
                     }
                     CollectorCommand::ScheduleCollect => {
-                        self.schedule_gc(Instant::now() + Duration::from_millis(10))
+                        self.schedule_gc(Instant::now() + self.average_collection * 5)
                     }
                 }
             }
@@ -222,25 +227,34 @@ impl Collector {
 
     fn collect_and_notify(&mut self, channels: &CollectorThreadChannels) {
         self.next_gc = None;
-        let gc_pause = match self.collect(channels) {
+        let gc_start = Instant::now();
+        let collect_result = self.collect(channels);
+        let gc_finish = Instant::now();
+
+        let gc_pause = match collect_result {
             CollectResult::Ok => {
+                let elapsed = gc_finish - gc_start;
+                // Keep track of the average collection duration as a moving
+                // average, weighted towards current average.
+                self.average_collection = (elapsed + self.average_collection * 2) / 3;
+
                 if self.thread_bins.is_empty() {
                     None
                 } else {
-                    Some(Duration::from_millis(50))
+                    Some((self.average_collection * 100).max(Duration::from_millis(100)))
                 }
             }
             CollectResult::CouldntRun => {
                 self.pause_failures += 1;
-                Some(Duration::from_millis(1))
+                Some(self.average_collection)
             }
         };
-        let now = Instant::now();
+
         if let Some(pause) = gc_pause {
-            self.schedule_gc(now + pause);
+            self.schedule_gc(gc_finish + pause);
         }
         let mut info = self.shared.info.lock();
-        info.last_run = now;
+        info.last_run = gc_finish;
         drop(info);
         self.shared.sync.notify_all();
         self.shared
@@ -255,18 +269,17 @@ impl Collector {
         }
 
         let mut all_bins = AHashMap::new();
-        let mut now = Instant::now();
-        let long_lock_deadline = now + Duration::from_millis(10);
-        let (force_gc, mut milli_wait) = if self.pause_failures >= 5 {
-            eprintln!("Forcing garbage collection");
-            (true, 5)
-        } else {
-            (false, 2)
-        };
+        let start = Instant::now();
+        let mut now = start;
+        let force_gc = self.pause_failures >= 5;
+        let mut lock_wait = (self.average_collection_locking / 8).max(Duration::from_millis(
+            2 * u64::from(self.pause_failures + 1),
+        ));
+        let long_lock_deadline = now + lock_wait * 8;
 
         let mut bins_to_lock = self.thread_bins.keys().copied().collect::<Vec<_>>();
         while !bins_to_lock.is_empty() {
-            let lock_deadline = now + Duration::from_millis(milli_wait);
+            let lock_deadline = now + lock_wait;
             let lock_deadline = if force_gc {
                 lock_deadline
             } else if long_lock_deadline < now {
@@ -296,7 +309,7 @@ impl Collector {
             }
             if !bins_to_lock.is_empty() {
                 now = Instant::now();
-                milli_wait *= 2;
+                lock_wait *= 2;
                 self.rng.shuffle(&mut bins_to_lock);
             }
         }
@@ -305,6 +318,9 @@ impl Collector {
             drop(all_bins);
             return CollectResult::CouldntRun;
         }
+
+        let locking_time = start.elapsed();
+        self.average_collection_locking = (locking_time + self.average_collection_locking * 2) / 3;
 
         self.pause_failures = 0;
 
@@ -466,17 +482,52 @@ pub struct CollectionGuard {
 
 impl CollectionGuard {
     pub fn collect(&mut self) {
+        // SAFETY: The guard is always present except during internal code which
+        // never invokes this function. We can assume_init_mut since we have mut
+        // reference to self. Because this function can invalidate references
+        // tied to this guard's lifetime, ownership of the guard is taken to
+        // force the compiler to invalidate any borrows.
         let guard = unsafe { self.inner.assume_init_mut() };
         ArcRwBinGuard::unlocked(guard, collect);
     }
 
     pub fn yield_to_collector(&mut self) {
+        // SAFETY: The guard is always present except during internal code which
+        // never invokes this function. We can assume_init_mut since we have mut
+        // reference to self. Because this function can invalidate references
+        // tied to this guard's lifetime, ownership of the guard is taken to
+        // force the compiler to invalidate any borrows.
         let guard = unsafe { self.inner.assume_init_mut() };
-        ArcRwBinGuard::bump(guard)
+        ArcRwBinGuard::bump(guard);
     }
 
-    fn bins(&self) -> &Bins {
-        unsafe { self.inner.assume_init_ref() }
+    /// # Safety
+    ///
+    /// This function should only be called when the underlying guard is
+    /// guaranteed to be present. This is the default state for this type.
+    unsafe fn bins(&self) -> &Bins {
+        self.inner.assume_init_ref()
+    }
+
+    fn adopt<T: Collectable>(&mut self, value: RefCounted<T>) -> (u32, BinId) {
+        // SAFETY: The guard is always present except during allocation. Panic
+        // handling is used to ensure that after this function returns, the
+        // guard still contains a valid RwLock guard.
+        unsafe {
+            let adopt_result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                let (gen, bin, returned_guard) = Bins::adopt(value, self.inner.assume_init_read());
+                self.inner
+                    .write(returned_guard.unwrap_or_else(|| self.thread.bins.read_arc()));
+                (gen, bin)
+            }));
+            match adopt_result {
+                Ok(result) => result,
+                Err(panic) => {
+                    self.inner.write(self.thread.bins.read_arc());
+                    std::panic::resume_unwind(panic)
+                }
+            }
+        }
     }
 }
 
@@ -492,6 +543,8 @@ impl CollectionGuard {
 
 impl Drop for CollectionGuard {
     fn drop(&mut self) {
+        // SAFETY: The guard is always present when each internal function
+        // returns.
         unsafe { self.inner.assume_init_drop() };
     }
 }
@@ -633,7 +686,10 @@ where
     T: Collectable,
 {
     fn from_parts(slot_generation: u32, bin_id: BinId, guard: &mut CollectionGuard) -> Self {
-        let data = guard.bins().slot_pointer::<T>(bin_id);
+        // SAFETY: The guard is always present except during allocation which
+        // never invokes this function. Since `bin_id` was just allocated, we
+        // also can assume that it is allocated.
+        let data = unsafe { guard.bins().allocated_slot_pointer::<T>(bin_id) };
         Self {
             data,
             creating_thread: guard.thread.thread_id,
@@ -643,14 +699,7 @@ where
     }
 
     pub fn new(value: T, guard: &mut CollectionGuard) -> Self {
-        let (gen, bin) = unsafe {
-            let (gen, bin, returned_guard) =
-                Bins::adopt(RefCounted::strong(value), guard.inner.assume_init_read());
-            guard
-                .inner
-                .write(returned_guard.unwrap_or_else(|| guard.thread.bins.read_arc()));
-            (gen, bin)
-        };
+        let (gen, bin) = guard.adopt(RefCounted::strong(value));
         Self::from_parts(gen, bin, guard)
     }
 
@@ -664,6 +713,10 @@ where
     }
 
     fn ref_counted(&self) -> &RefCounted<T> {
+        // SAFETY: The garbage collector will not collect data while we have a
+        // strong count. The returned lifetime of the data is tied to `self`,
+        // which ensures the returned lifetime is valid only for as long as this
+        // `Strong<T>` is alive.
         unsafe { &(*self.data) }
     }
 }
@@ -705,14 +758,7 @@ where
     T: Collectable,
 {
     pub fn new(value: T, guard: &mut CollectionGuard) -> Self {
-        let (slot_generation, bin_id) = unsafe {
-            let (slot_generation, bin_id, returned_guard) =
-                Bins::adopt(RefCounted::weak(value), guard.inner.assume_init_read());
-            guard
-                .inner
-                .write(returned_guard.unwrap_or_else(|| guard.thread.bins.read_arc()));
-            (slot_generation, bin_id)
-        };
+        let (slot_generation, bin_id) = guard.adopt(RefCounted::weak(value));
 
         Self {
             creating_thread: guard.thread.thread_id,
@@ -724,8 +770,9 @@ where
 
     pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
         let type_id = TypeId::of::<T>();
-        let slabs = &guard
-            .bins()
+        // SAFETY: The guard is always present except during allocation which
+        // never invokes this function.
+        let slabs = &unsafe { guard.bins() }
             .by_type
             .get(&type_id)
             .expect("areas are never deallocated")
@@ -737,7 +784,12 @@ where
         let slot = &slab.slots[usize::from(self.bin_id.slot())];
         slot.state
             .allocated_with_generation(self.slot_generation)
-            .then_some(unsafe { &(*slot.value.get()).allocated.value })
+            .then_some(
+                // SAFETY: The collector cannot collect data while `guard` is
+                // active, so it is safe to create a reference to this data
+                // bound to the guard's lifetime.
+                unsafe { &(*slot.value.get()).allocated.value },
+            )
     }
 }
 
@@ -755,24 +807,27 @@ struct Bins {
 }
 
 impl Bins {
-    fn slot_pointer<T>(&self, bin_id: BinId) -> *const RefCounted<T>
+    /// # Safety
+    ///
+    /// This function must only be called when `bin_id` is known to be
+    /// allocated.
+    unsafe fn allocated_slot_pointer<T>(&self, bin_id: BinId) -> *const RefCounted<T>
     where
         T: Collectable,
     {
-        unsafe {
-            &*(*self
-                .by_type
-                .get(&TypeId::of::<T>())
-                .expect("areas are never deallocated")
-                .as_any()
-                .downcast_ref::<Bin<T>>()
-                .expect("type mismatch")
-                .slabs[bin_id.slab() as usize]
-                .slots[usize::from(bin_id.slot())]
-            .value
-            .get())
-            .allocated
-        }
+        let slot = &self
+            .by_type
+            .get(&TypeId::of::<T>())
+            .expect("areas are never deallocated")
+            .as_any()
+            .downcast_ref::<Bin<T>>()
+            .expect("type mismatch")
+            .slabs[bin_id.slab() as usize]
+            .slots[usize::from(bin_id.slot())];
+
+        // The actual unsafe operation: Requires that this slot is allocated to
+        // be safe.
+        &*(*slot.value.get()).allocated
     }
 
     fn adopt<T>(
@@ -829,6 +884,11 @@ where
             let slot_index = bin_id.slot();
             let slot = &slab.slots[usize::from(slot_index)];
             if let Some(generation) = slot.state.try_allocate() {
+                // SAFETY: Unallocated slots are only accessed through the
+                // current local thread while a guard is held, which must be
+                // true for this function to be invoked. try_allocate ensures
+                // this slot wasn't previously allocated, making it safe for us
+                // to initialize the data with `value`.
                 let next = unsafe {
                     let next = (*slot.value.get()).free;
                     slot.value.get().write(SlotData {
@@ -879,6 +939,8 @@ where
                 let Some(slot_generation) = slot.state.generation() else {
                     continue;
                 };
+                // SAFETY: `state.generation()` only returns `Some()` when the
+                // slot is allocated.
                 let strong_count =
                     unsafe { (*slot.value.get()).allocated.strong.load(Ordering::Relaxed) };
                 if strong_count > 0 {
@@ -896,6 +958,8 @@ where
     fn trace_one(&self, slot_generation: u32, bin: BinId, tracer: &mut Tracer) {
         let slot = &self.slabs[bin.slab() as usize].slots[usize::from(bin.slot())];
         if slot.state.generation() == Some(slot_generation) {
+            // SAFETY: `state.generation()` only returns `Some()` when the slot
+            // is allocated.
             unsafe {
                 (*slot.value.get()).allocated.value.trace(tracer);
             }
@@ -992,8 +1056,12 @@ where
 
     fn get(&self, index: usize) -> Option<&Slab<T>> {
         if index < 256 {
+            // SAFETY: Slabs are always initialized and this function ties the
+            // lifetime of the slab to `self`.
             unsafe { (*self.slabs[index].get()).as_ref() }.map(|slab| &**slab)
         } else {
+            // SAFETY: Slabs are always initialized and this function ties the
+            // lifetime of the slab to `self`.
             unsafe { (*self.next.get()).as_ref() }.and_then(|slabs| slabs.get(index - 256))
         }
     }
@@ -1010,10 +1078,10 @@ where
         {
             if first_free_slab < 256 {
                 let mut slab_index = first_free_slab;
-                while let Some(slab) = this
-                    .slabs
-                    .get(slab_index)
-                    .and_then(|slab| unsafe { (*slab.get()).as_ref() })
+                while let Some(slab) = this.slabs.get(slab_index).and_then(|slab|
+                        // SAFETY: Slabs are always initialized and this
+                        // function ties the lifetime of the slab to `this`.
+                        unsafe { (*slab.get()).as_ref() })
                 {
                     match slab.try_adopt(value, slab_index + slab_offset) {
                         Ok(result) => return result,
@@ -1023,6 +1091,8 @@ where
                 }
 
                 for index in slab_index..256 {
+                    // SAFETY: Slabs are always initialized and this
+                    // function ties the lifetime of the slab to `this`.
                     let slab = unsafe { &mut (*this.slabs[index].get()) };
 
                     if let Some(slab) = slab {
@@ -1036,6 +1106,8 @@ where
                     }
                 }
 
+                // SAFETY: Slabs are always initialized and this function ties
+                // the lifetime of `next` to `this`.
                 if let Some(next) = unsafe { &*this.next.get() } {
                     adopt_inner(next, value, 0, slab_offset + 256)
                 } else {
@@ -1043,32 +1115,14 @@ where
                     (0, BinId::new(slab_offset as u32 + 256, 0))
                 }
             } else {
+                // SAFETY: Slabs are always initialized and this function ties
+                // the lifetime of `next` to `this`.
                 let next_slab = unsafe { (*this.next.get()).as_ref() }.expect("invalid first_free");
                 adopt_inner(next_slab, value, first_free_slab - 256, slab_offset + 256)
-                // let next_slab = self.next.get_or_init(|| Slab::new(value.take().expect("invoked only once")));
             }
         }
 
         adopt_inner(self, value, first_free_slab, 0)
-        // match last_slab.try_adopt(value, slabs.len() - 1) {
-        //     Ok(result) => result,
-        //     Err(value) => {
-        //         drop(slabs);
-        //         let mut slabs = self.slabs.write().expect("poisoned");
-        //         // Between the lock reaquisition, another thread could have
-        //         // allocated a new slab. Check to see if we can allocate
-        //         // within it rather than allocating another slab.
-        //         let last_slab = slabs.last().expect("never empty");
-        //         match last_slab.try_adopt(value, slabs.len() - 1) {
-        //             Ok(result) => result,
-        //             Err(value) => {
-        //                 let slab_index = slabs.len();
-        //                 slabs.push(Box::new(Slab::new(value)));
-        //                 (0, BinId::new(slab_index as u32, 0))
-        //             }
-        //         }
-        //     }
-        // }
     }
 
     fn iter(&self) -> SlabsIter<'_, T> {
@@ -1101,11 +1155,15 @@ impl<'a, T> Iterator for SlabsIter<'a, T> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             for slab in &mut self.slabs {
+                // SAFETY: Slabs are always initialized and this function ties
+                // the lifetime of `slab` to `'a`.
                 let Some(slab) = (unsafe { (*slab.get()).as_ref() }) else {
                     continue;
                 };
                 return Some(slab);
             }
+            // SAFETY: Slabs are always initialized and this function ties
+            // the lifetime of `slab` to `'a`.
             self.this = unsafe { (*self.this.next.get()).as_ref() }?;
         }
     }
@@ -1121,6 +1179,8 @@ impl<T> Slab<T> {
     where
         T: Collectable,
     {
+        // SAFETY: `Slot<T>` only utilizes types that zero-initialized data is a
+        // valid representation.
         let mut this: Box<Self> =
             unsafe { Box::from_raw(alloc_zeroed(Layout::new::<Self>()).cast()) };
         this.slots[0] = Slot {
@@ -1169,6 +1229,8 @@ struct Slot<T> {
 impl<T> Slot<T> {
     fn allocate(&self, value: RefCounted<T>) -> u32 {
         let generation = self.state.allocate();
+        // SAFETY: `state.allocate()` will panic if the slot was previously
+        // allocated.
         unsafe {
             self.value.get().write(SlotData {
                 allocated: ManuallyDrop::new(value),
@@ -1180,6 +1242,10 @@ impl<T> Slot<T> {
     fn sweep(&self, mark_bits: u8, free_head: BinId) -> SlotSweepStatus {
         match self.state.sweep(mark_bits) {
             SlotSweepStatus::Swept => {
+                // SAFETY: `state.sweep()` has marked this slot as free,
+                // ensuring all attempts to get a reference will fail. It is
+                // safe to drop the data, which we then overwrite with the free
+                // head for reusing slots.
                 unsafe {
                     ManuallyDrop::drop(&mut (*self.value.get()).allocated);
                     self.value.get().write(SlotData { free: free_head.0 });
