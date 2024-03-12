@@ -9,7 +9,7 @@ use std::num::NonZeroUsize;
 use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, Weak};
 use std::time::{Duration, Instant};
 use std::{array, thread};
 
@@ -62,6 +62,8 @@ impl CollectorCommand {
     }
 }
 
+type AllThreadBins = Arc<RwLock<AHashMap<CollectorThreadId, Weak<RwLock<Bins>>>>>;
+
 struct ThreadBins {
     alive: bool,
     bins: Arc<RwLock<Bins>>,
@@ -71,6 +73,7 @@ struct CollectorInfo {
     info: Mutex<CollectorInfoData>,
     sync: Condvar,
     signalled_collector: AtomicBool,
+    all_threads: AllThreadBins,
 }
 
 impl CollectorInfo {
@@ -404,8 +407,12 @@ impl Collector {
             }
         }
 
-        for thread_id in threads_to_remove {
-            all_bins.remove(&thread_id);
+        if !threads_to_remove.is_empty() {
+            let mut all_threads = self.shared.all_threads.write();
+            for thread_id in threads_to_remove {
+                all_bins.remove(&thread_id);
+                all_threads.remove(&thread_id);
+            }
         }
 
         CollectResult::Ok
@@ -432,6 +439,7 @@ impl GlobalCollector {
                 }),
                 sync: Condvar::new(),
                 signalled_collector: AtomicBool::new(false),
+                all_threads: AllThreadBins::default(),
             });
             thread::Builder::new()
                 .name(String::from("collector"))
@@ -455,6 +463,7 @@ thread_local! {
 struct ThreadLocalBins {
     bins: Arc<RwLock<Bins>>,
     thread_id: CollectorThreadId,
+    all_threads: AllThreadBins,
 }
 
 impl ThreadLocalBins {
@@ -483,14 +492,18 @@ impl Drop for ThreadLocalBins {
 ///
 /// This function utilizes Rust's thread-local storage.
 pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
-    // We initialize the global collector by invoking get.
-    GlobalCollector::get();
     THREAD_BINS.with_borrow(|lock| {
         lock.get_or_init(|| {
+            let all_threads = GlobalCollector::get().info.all_threads.clone();
             let bins = Arc::new(RwLock::new(Bins::default()));
             let thread_id = CollectorThreadId::unique();
             CollectorCommand::NewThread(thread_id, bins.clone()).send();
-            ThreadLocalBins { bins, thread_id }
+            all_threads.write().insert(thread_id, Arc::downgrade(&bins));
+            ThreadLocalBins {
+                bins,
+                thread_id,
+                all_threads,
+            }
         });
         wrapped()
     })
@@ -888,12 +901,13 @@ where
         }
     }
 
-    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard RefCounted<T>> {
+    fn load_slot_from<'guard>(
+        &self,
+        bins: &Map<TypeId, Arc<dyn AnyBin>>,
+        _guard: &'guard CollectionGuard,
+    ) -> Option<&'guard RefCounted<T>> {
         let type_id = TypeId::of::<T>();
-        // SAFETY: The guard is always present except during allocation which
-        // never invokes this function.
-        let slabs = &unsafe { guard.bins() }
-            .by_type
+        let slabs = &bins
             .get(&type_id)
             .assert("areas are never deallocated")
             .as_any()
@@ -912,24 +926,66 @@ where
             )
     }
 
+    fn load_slot<'guard>(
+        &self,
+        guard: &'guard CollectionGuard,
+    ) -> Result<Option<&'guard RefCounted<T>>, CollectionStarting> {
+        Ok(if guard.thread.thread_id == self.creating_thread {
+            self.load_slot_from(
+                &{
+                    // SAFETY: The guard is always present except during allocation which
+                    // never invokes this function.
+                    &unsafe { guard.bins() }
+                }
+                .by_type,
+                guard,
+            )
+        } else {
+            let all_threads = guard.thread.all_threads.read();
+            let Some(other_thread_bins) = all_threads
+                .get(&self.creating_thread)
+                .and_then(Weak::upgrade)
+            else {
+                return Ok(None);
+            };
+            let result = match other_thread_bins.try_read() {
+                Some(other_thread) => self.load_slot_from(&other_thread.by_type, guard),
+                None => return Err(CollectionStarting),
+            };
+            drop(other_thread_bins);
+            result
+        })
+    }
+
     /// Loads a reference to the underlying data. Returns `None` if the data has
     /// been collected and is no longer available.
-    #[must_use]
-    pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
-        self.load_slot(guard).map(|allocated| &allocated.value)
+    ///
+    /// # Errors
+    ///
+    /// Returns `CollectionStarting` if `self` was created in another thread and
+    /// that thread is currently locked by the garbage collector.
+    pub fn load<'guard>(
+        &self,
+        guard: &'guard CollectionGuard,
+    ) -> Result<Option<&'guard T>, CollectionStarting> {
+        Ok(self.load_slot(guard)?.map(|allocated| &allocated.value))
     }
 
     /// Loads a root reference to the underlying data. Returns `None` if the
     /// data has been collected and is no longer available.
-    #[must_use]
-    pub fn as_root(&self, guard: &CollectionGuard) -> Option<Root<T>> {
-        self.load_slot(guard).map(|allocated| {
+    ///
+    /// # Errors
+    ///
+    /// Returns `CollectionStarting` if `self` was created in another thread and
+    /// that thread is currently locked by the garbage collector.
+    pub fn as_root(&self, guard: &CollectionGuard) -> Result<Option<Root<T>>, CollectionStarting> {
+        Ok(self.load_slot(guard)?.map(|allocated| {
             allocated.strong.fetch_add(1, Ordering::Acquire);
             Root {
                 data: allocated,
                 reference: *self,
             }
-        })
+        }))
     }
 }
 
@@ -949,6 +1005,11 @@ unsafe impl<T> Send for Ref<T> where T: Collectable {}
 // `Collectable` requires `Send`, and `Ref<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
 unsafe impl<T> Sync for Ref<T> where T: Collectable {}
+
+/// A lock has been established by the collector on data needed to resolve a
+/// reference.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct CollectionStarting;
 
 #[derive(Default)]
 struct Bins {

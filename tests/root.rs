@@ -7,11 +7,11 @@ fn lifecycle() {
         let strong = Root::new(42_u32, &mut guard);
         let weak = strong.downgrade();
 
-        assert_eq!(weak.load(&guard), Some(&42));
+        assert_eq!(weak.load(&guard).unwrap(), Some(&42));
 
         // This collection should not remove anything.
         guard.collect();
-        assert_eq!(weak.load(&guard), Some(&42));
+        assert_eq!(weak.load(&guard).unwrap(), Some(&42));
 
         // Drop the strong reference
         drop(strong);
@@ -19,6 +19,6 @@ fn lifecycle() {
         // Now collection should remove the value.
         guard.collect();
 
-        assert!(weak.load(&guard).is_none());
+        assert_eq!(weak.load(&guard).unwrap(), None);
     });
 }
