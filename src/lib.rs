@@ -1,16 +1,16 @@
 use core::slice;
 use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
-use std::cell::{OnceCell, RefCell, UnsafeCell};
+use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 use std::marker::PhantomData;
 use std::mem::{ManuallyDrop, MaybeUninit};
 use std::num::NonZeroUsize;
 use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
-use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
+use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
-use std::{array, thread};
+use std::{array, ptr, thread};
 
 use ahash::AHashMap;
 use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
@@ -721,7 +721,13 @@ where
     }
 }
 
+// SAFETY: Strong<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Strong<T>` ensures proper Send + Sync
+// behavior in its memory accesses.
 unsafe impl<T> Send for Strong<T> where T: Collectable {}
+// SAFETY: Strong<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Strong<T>` ensures proper Send + Sync
+// behavior in its memory accesses.
 unsafe impl<T> Sync for Strong<T> where T: Collectable {}
 
 impl<T> Deref for Strong<T>
@@ -801,6 +807,15 @@ impl<T> Clone for Weak<T> {
 
 impl<T> Copy for Weak<T> {}
 
+// SAFETY: Weak<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Weak<T>` ensures proper Send + Sync
+// behavior in its memory accesses.
+unsafe impl<T> Send for Weak<T> where T: Collectable {}
+// SAFETY: Weak<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Weak<T>` ensures proper Send + Sync
+// behavior in its memory accesses.
+unsafe impl<T> Sync for Weak<T> where T: Collectable {}
+
 #[derive(Default)]
 struct Bins {
     by_type: Map<TypeId, Arc<dyn AnyBin>>,
@@ -859,7 +874,7 @@ impl Bins {
 struct Bin<T> {
     free_head: AtomicU32,
     slabs: Slabs<T>,
-    first_free_slab: AtomicUsize,
+    slabs_tail: Cell<Option<*const Slabs<T>>>,
 }
 
 impl<T> Bin<T>
@@ -869,8 +884,8 @@ where
     fn new(first_value: RefCounted<T>) -> Self {
         Self {
             free_head: AtomicU32::new(0),
-            slabs: Slabs::new(first_value),
-            first_free_slab: AtomicUsize::new(0),
+            slabs: Slabs::new(first_value, 0),
+            slabs_tail: Cell::new(None),
         }
     }
 
@@ -906,16 +921,17 @@ where
             }
         }
 
-        let first_free_slab = self.first_free_slab.load(Ordering::Relaxed);
-        let (generation, bin_id) = self.slabs.adopt(value, first_free_slab);
-        let allocated_in_slab = bin_id.slab() as usize;
-        if first_free_slab < allocated_in_slab {
-            let _result = self.first_free_slab.compare_exchange(
-                first_free_slab,
-                allocated_in_slab,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            );
+        let tail = if let Some(tail) = self.slabs_tail.get() {
+            // SAFETY: slabs_tail is never deallocated, and this unsafe
+            // operation only extends the lifetime as far as `self`.
+            unsafe { &*tail }
+        } else {
+            &self.slabs
+        };
+        let (generation, bin_id, new_tail) = tail.adopt(value);
+
+        if new_tail.is_some() {
+            self.slabs_tail.set(new_tail);
         }
         (generation, bin_id)
     }
@@ -1032,6 +1048,8 @@ impl BinId {
 }
 
 struct Slabs<T> {
+    offset: usize,
+    first_free_slab: Cell<usize>,
     slabs: [UnsafeCell<Option<Box<Slab<T>>>>; 256],
     next: UnsafeCell<Option<Box<Slabs<T>>>>,
 }
@@ -1040,9 +1058,11 @@ impl<T> Slabs<T>
 where
     T: Collectable,
 {
-    fn new(initial_value: RefCounted<T>) -> Self {
+    fn new(initial_value: RefCounted<T>, offset: usize) -> Self {
         let mut initial_value = Some(initial_value);
         Self {
+            offset,
+            first_free_slab: Cell::new(0),
             slabs: array::from_fn(|index| {
                 UnsafeCell::new(if index == 0 {
                     Some(Slab::new(initial_value.take().expect("only called once")))
@@ -1066,63 +1086,44 @@ where
         }
     }
 
-    fn adopt(&self, value: RefCounted<T>, first_free_slab: usize) -> (u32, BinId) {
-        fn adopt_inner<T>(
-            this: &Slabs<T>,
-            mut value: RefCounted<T>,
-            first_free_slab: usize,
-            slab_offset: usize,
-        ) -> (u32, BinId)
-        where
-            T: Collectable,
-        {
-            if first_free_slab < 256 {
-                let mut slab_index = first_free_slab;
-                while let Some(slab) = this.slabs.get(slab_index).and_then(|slab|
-                        // SAFETY: Slabs are always initialized and this
-                        // function ties the lifetime of the slab to `this`.
-                        unsafe { (*slab.get()).as_ref() })
-                {
-                    match slab.try_adopt(value, slab_index + slab_offset) {
-                        Ok(result) => return result,
-                        Err(returned) => value = returned,
-                    }
-                    slab_index += 1;
-                }
+    fn adopt(&self, mut value: RefCounted<T>) -> (u32, BinId, Option<*const Slabs<T>>) {
+        let first_free = self.first_free_slab.get();
 
-                for index in slab_index..256 {
-                    // SAFETY: Slabs are always initialized and this
-                    // function ties the lifetime of the slab to `this`.
-                    let slab = unsafe { &mut (*this.slabs[index].get()) };
+        for index in first_free..256 {
+            // SAFETY: Slabs are always initialized and this
+            // function ties the lifetime of the slab to `this`.
+            let slab = unsafe { &mut (*self.slabs[index].get()) };
 
-                    if let Some(slab) = slab {
-                        match slab.try_adopt(value, index + slab_offset) {
-                            Ok(result) => return result,
-                            Err(returned) => value = returned,
+            if let Some(slab) = slab {
+                match slab.try_adopt(value, index + self.offset) {
+                    Ok((gen, bin)) => {
+                        if first_free < index {
+                            self.first_free_slab.set(index);
                         }
-                    } else {
-                        *slab = Some(Slab::new(value));
-                        return (0, BinId::new(index as u32, 0));
+                        return (gen, bin, None);
                     }
-                }
-
-                // SAFETY: Slabs are always initialized and this function ties
-                // the lifetime of `next` to `this`.
-                if let Some(next) = unsafe { &*this.next.get() } {
-                    adopt_inner(next, value, 0, slab_offset + 256)
-                } else {
-                    unsafe { this.next.get().write(Some(Box::new(Slabs::new(value)))) };
-                    (0, BinId::new(slab_offset as u32 + 256, 0))
+                    Err(returned) => value = returned,
                 }
             } else {
-                // SAFETY: Slabs are always initialized and this function ties
-                // the lifetime of `next` to `this`.
-                let next_slab = unsafe { (*this.next.get()).as_ref() }.expect("invalid first_free");
-                adopt_inner(next_slab, value, first_free_slab - 256, slab_offset + 256)
+                *slab = Some(Slab::new(value));
+                return (0, BinId::new(index as u32, 0), None);
             }
         }
 
-        adopt_inner(self, value, first_free_slab, 0)
+        // SAFETY: Slabs are always initialized and this function ties
+        // the lifetime of `next` to `this`.
+        if let Some(next) = unsafe { &*self.next.get() } {
+            next.adopt(value)
+        } else {
+            let slabs = Box::new(Slabs::new(value, self.offset + 256));
+            let new_tail = ptr::from_ref(&*slabs);
+
+            // SAFETY: next is never accessed by any other thread except the
+            // thread that owns this set of bins.
+            unsafe { self.next.get().write(Some(slabs)) };
+
+            (0, BinId::new(self.offset as u32 + 256, 0), Some(new_tail))
+        }
     }
 
     fn iter(&self) -> SlabsIter<'_, T> {
@@ -1257,8 +1258,10 @@ impl<T> Slot<T> {
     }
 }
 
-unsafe impl<T> Send for Slabs<T> where T: Send {}
-unsafe impl<T> Sync for Slabs<T> where T: Sync {}
+// SAFETY: Bin<T> is Send as long as T is Send.
+unsafe impl<T> Send for Bin<T> where T: Send {}
+// SAFETY: Bin<T> is Sync as long as T is Sync.
+unsafe impl<T> Sync for Bin<T> where T: Sync {}
 
 struct RefCounted<T> {
     strong: AtomicU64,
