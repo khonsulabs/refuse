@@ -1,17 +1,9 @@
+//! An example demonstrating multithreaded allocations.
+//!
+//! This exists an easy executable to tweak and run with profiling tools.
 use musegc::{collected, CollectionGuard, Ref};
 
 fn main() {
-    // collected(|| {
-    //     let mut guard = CollectionGuard::acquire();
-    //     for _ in 0..1000 {
-    //         Ref::new([0; 32], &mut guard);
-    //     }
-    //     guard.collect();
-    //     for _ in 0..1000 {
-    //         Ref::new([0; 32], &mut guard);
-    //     }
-    //     guard.collect();
-    // });
     std::thread::scope(|s| {
         for _ in 0..16 {
             s.spawn(|| {

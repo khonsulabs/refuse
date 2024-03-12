@@ -1,5 +1,4 @@
 #![doc = include_str!("../README.md")]
-#![warn(missing_docs)]
 use core::slice;
 use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
@@ -889,10 +888,7 @@ where
         }
     }
 
-    /// Loads a reference to the underlying data. Returns `None` if the data has
-    /// been collected and is no longer available.
-    #[must_use]
-    pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
+    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard RefCounted<T>> {
         let type_id = TypeId::of::<T>();
         // SAFETY: The guard is always present except during allocation which
         // never invokes this function.
@@ -912,8 +908,28 @@ where
                 // SAFETY: The collector cannot collect data while `guard` is
                 // active, so it is safe to create a reference to this data
                 // bound to the guard's lifetime.
-                unsafe { &(*slot.value.get()).allocated.value },
+                unsafe { &(*slot.value.get()).allocated },
             )
+    }
+
+    /// Loads a reference to the underlying data. Returns `None` if the data has
+    /// been collected and is no longer available.
+    #[must_use]
+    pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
+        self.load_slot(guard).map(|allocated| &allocated.value)
+    }
+
+    /// Loads a root reference to the underlying data. Returns `None` if the
+    /// data has been collected and is no longer available.
+    #[must_use]
+    pub fn as_root(&self, guard: &CollectionGuard) -> Option<Root<T>> {
+        self.load_slot(guard).map(|allocated| {
+            allocated.strong.fetch_add(1, Ordering::Acquire);
+            Root {
+                data: allocated,
+                reference: *self,
+            }
+        })
     }
 }
 

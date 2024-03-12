@@ -1,3 +1,4 @@
+//! A basic usage example demonstrating the garbage collector.
 use musegc::{CollectionGuard, Ref, Root};
 
 fn main() {

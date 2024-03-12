@@ -1,3 +1,4 @@
+workspace = { members = ["benchmarks"] }
 [package]
 name = "musegc"
 version = "0.1.0"
@@ -16,20 +17,10 @@ nanorand = { version = "0.7.0", default-features = false, features = [
 ] }
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }
 
-[dev-dependencies]
-criterion = "0.5"
-timings = { git = "https://github.com/khonsulabs/timings.git" }
 
-[lints.clippy]
-pedantic = "warn"
-
-[[bench]]
-name = "vs-arc"
-harness = false
-
-[[bench]]
-name = "timings"
-harness = false
+[lints]
+clippy.pedantic = "warn"
+rust.missing_docs = "warn"
 
 [profile.release]
 debug = true

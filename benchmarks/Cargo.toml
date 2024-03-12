@@ -1,0 +1,20 @@
+[package]
+name = "benchmarks"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+criterion = "0.5"
+timings = { git = "https://github.com/khonsulabs/timings.git" }
+musegc = { path = "../" }
+
+[[bench]]
+name = "vs-arc"
+harness = false
+
+[[bench]]
+name = "timings"
+harness = false
