@@ -1517,11 +1517,9 @@ fn weak_lifecycle() {
         let collected = Ref::new(42_u32, &mut guard);
 
         assert_eq!(collected.load(&guard), Some(&42));
-        drop(guard);
 
-        collect();
+        guard.collect();
 
-        let guard = CollectionGuard::acquire();
         assert!(collected.load(&guard).is_none());
     });
 }
