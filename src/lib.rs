@@ -604,6 +604,11 @@ impl CollectionGuard {
     ///
     /// This guard is used to provide read-only access to garbage collected
     /// allocations.
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if this function is called outside of code executed
+    /// by [`collected()`].
     #[must_use]
     pub fn acquire() -> Self {
         let thread = ThreadLocalBins::get();
