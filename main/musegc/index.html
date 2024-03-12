@@ -1,0 +1,149 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="musegc"><title>musegc - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="musegc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (4a0cc881d 2024-03-11)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../static.files/storage-4c98445ec4002617.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../musegc/index.html">musegc</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><ul class="block">
+            <li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#functions">Functions</a></li></ul></section></div></nav><div class="sidebar-resizer"></div>
+    <main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../musegc/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">musegc</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="src" href="../src/musegc/lib.rs.html#1-1550">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="musegc"><a class="doc-anchor" href="#musegc">§</a>musegc</h2>
+<blockquote>
+<p>This name is a placeholder. The design of this crate has nothing to do with
+<a href="https://github.com/khonsulabs/muse">Muse</a>, so naming it <code>muse-gc</code> seems misleading.</p>
+</blockquote>
+<p>An easy-to-use, incremental, multi-threaded garbage collector for Rust.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>musegc::{CollectionGuard, Root, Ref};
+
+<span class="comment">// Execute a closure with access to a garbage collector.
+</span>musegc::collected(|| {
+    <span class="kw">let </span><span class="kw-2">mut </span>guard = CollectionGuard::acquire();
+    <span class="comment">// Allocate a vec![Ref(1), Ref(2), Ref(3)].
+    </span><span class="kw">let </span>values: Vec&lt;Ref&lt;u32&gt;&gt; = (<span class="number">1</span>..=<span class="number">3</span>).map(|value| Ref::new(value, <span class="kw-2">&amp;mut </span>guard)).collect();
+    <span class="kw">let </span>values = Root::new(values, <span class="kw-2">&amp;mut </span>guard);
+    drop(guard);
+
+    <span class="comment">// Manually execute the garbage collector. Our data will not be freed,
+    // since `values` is a "root" reference.
+    </span>musegc::collect();
+
+    <span class="comment">// Root references allow direct access to their data, even when a
+    // `CollectionGuard` isn't held.
+    </span><span class="kw">let </span>(one, two, three) = (values[<span class="number">0</span>], values[<span class="number">1</span>], values[<span class="number">2</span>]);
+
+    <span class="comment">// Accessing the data contained in a `Ref` requires a guard, however.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>guard = CollectionGuard::acquire();
+    <span class="macro">assert_eq!</span>(one.load(<span class="kw-2">&amp;</span>guard), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">1</span>));
+    <span class="macro">assert_eq!</span>(two.load(<span class="kw-2">&amp;</span>guard), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">2</span>));
+    <span class="macro">assert_eq!</span>(three.load(<span class="kw-2">&amp;</span>guard), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">3</span>));
+
+    <span class="comment">// Dropping our root will allow the collector to free our `Ref`s.
+    </span>drop(values);
+    guard.collect();
+    <span class="macro">assert!</span>(one.load(<span class="kw-2">&amp;</span>guard).is_none());
+});</code></pre></div>
+<h3 id="motivation"><a class="doc-anchor" href="#motivation">§</a>Motivation</h3>
+<p>While working on <a href="https://github.com/khonsulabs/muse">Muse</a>, @Ecton recognized <a href="https://github.com/khonsulabs/muse/issues/4">the need for garbage
+collection</a> to prevent untrusted scripts from uncontrollably leaking
+memory. After surveying the landscape, he didn’t find any that would easily
+incorporate into his vision for the language. As far as he can tell, the design
+choices of this collector are different than any existing collector in Rust.</p>
+<h3 id="design"><a class="doc-anchor" href="#design">§</a>Design</h3>
+<p>This crate exposes a completely safe API for an incremental, multi-threaded,
+tracing garbage collector in Rust.</p>
+<p>Tracing garbage collectors can be implemented in various ways to identify the
+“roots” of known memory so that they can trace from the roots through all
+necessary references to determine which memory allocations can be freed.</p>
+<p>This crate exposes a <code>Root&lt;T&gt;</code> type which behaves similarly to an <code>Arc&lt;T&gt;</code> but
+automatically becomes a root for the collector. <code>Root&lt;T&gt;</code> implements
+<code>Deref&lt;Target = T&gt;</code>, allowing access to the underlying data even while the
+collector is running.</p>
+<p>The <code>Ref&lt;T&gt;</code> type implements <code>Copy</code> and does not provide direct access to the
+underlying data. To get a reference to the underlying data, a weak reference
+must be upgraded using a <code>CollectionGuard</code>. The returned reference is tied to
+the guard, which prevents collection from running while any guards are held.</p>
+<p>A <code>CollectionGuard</code> is needed to:</p>
+<ul>
+<li>Allocate a new <code>Root&lt;T&gt;</code> or <code>Ref&lt;T&gt;</code></li>
+<li>Load an <code>&amp;T</code> from a <code>Ref&lt;T&gt;</code></li>
+</ul>
+<h3 id="safety"><a class="doc-anchor" href="#safety">§</a>Safety</h3>
+<p>This crate has safety comments next to each usage of unsafe, but and passes Miri
+tests when provided the flags:</p>
+<div class="example-wrap"><pre class="language-sh"><code>MIRIFLAGS=&quot;-Zmiri-permissive-provenance -Zmiri-ignore-leaks&quot; cargo +nightly miri test
+</code></pre></div>
+<ul>
+<li><code>-Zmiri-permissive-provenance</code>: <code>parking_lot</code> internally casts a usize to a
+pointer, which breaks pointer provenance rules. Pointer provinence is
+currently only an experimental model, and nothing this collector is using
+from <code>parking_lot</code> couldn’t be implemented in a fashion that honors pointer
+provinence. Thus, this library’s author consider’s this an implementation
+detail that can be ignored.</li>
+<li><code>-Zmiri-ignore-leaks</code>: This crate uses thread local storage which is
+documented to not always run destructors for local keys on the main thread, as
+some platforms abort rather than performing cleanup code.</li>
+</ul>
+<p>This crate exposes a safe API that guarantees no undefined behavior can be
+triggered by incorrectly using the API or implementing the <code>Collectable</code> trait
+incorrectly. <strong>Incorrect usage of this crate can lead to deadlocks and memory
+leaks.</strong> Specifically:</p>
+<ul>
+<li>Reference cycles between <code>Root&lt;T&gt;</code>’s will lead to leaks just as <code>Arc&lt;T&gt;</code>’s
+will.</li>
+<li>If a <code>Root&lt;T&gt;</code> uses locking for interior mutability, holding a lock without
+a collector guard can cause the garbage collector to block until the lock is
+released. This escalates from a pause to a deadlock if the lock can’t be
+released without acquiring a collection guard. <strong>All locks should acquired and
+dropped only while a <code>CollectorGuard</code> is acquired.</strong></li>
+</ul>
+<h3 id="whats-left"><a class="doc-anchor" href="#whats-left">§</a>What’s left</h3>
+<ul>
+<li><strong>Finalizers</strong>: Currently Drop is executed, but there’s no way to attach
+behavior to run before the object is dropped.</li>
+<li><strong>More advanced algorithm</strong>: The current algorithm employed is the naive
+mark-and-sweep. It performs well for smaller sets, but will become slower as
+the memory sets grow larger. Other algorithms may be considered, but the
+current naive algorithm is probably suitable for its application
+(<a href="https://github.com/khonsulabs/muse">Muse</a>).</li>
+</ul>
+<h3 id="benchmarks"><a class="doc-anchor" href="#benchmarks">§</a>Benchmarks</h3>
+<p>Benchmarking is hard. These benchmarks aren’t adequate. These numbers are from
+executing <code>benches/timings.rs</code>, which compares allocating 100,000 32-byte values,
+comparing the time it takes to allocate each <code>Arc&lt;[u8; 32]&gt;</code>, <code>Root&lt;[u8;32]&gt;</code>,
+and <code>Ref&lt;[u8; 32]&gt;</code>. The measurements are the amount of time it takes for an
+individual allocation. These results are from running on a Ryzen 3700X.</p>
+<h4 id="1-thread"><a class="doc-anchor" href="#1-thread">§</a>1 thread</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
+<tr><td>Arc</td><td>47.87ns</td><td>20.00ns</td><td>11.27us</td><td>151.4ns</td><td>0.010%</td></tr>
+<tr><td>Root</td><td>62.02ns</td><td>30.00ns</td><td>182.2us</td><td>1.367us</td><td>0.000%</td></tr>
+<tr><td>Ref</td><td>65.89ns</td><td>30.00ns</td><td>439.2us</td><td>1.556us</td><td>0.001%</td></tr>
+</tbody></table>
+</div><h4 id="4-threads"><a class="doc-anchor" href="#4-threads">§</a>4 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
+<tr><td>Arc</td><td>47.21ns</td><td>20.00ns</td><td>5.810us</td><td>138.0ns</td><td>0.010%</td></tr>
+<tr><td>Root</td><td>147.5ns</td><td>30.00ns</td><td>314.4us</td><td>3.849us</td><td>0.001%</td></tr>
+<tr><td>Ref</td><td>71.03ns</td><td>30.00ns</td><td>633.3us</td><td>2.464us</td><td>0.000%</td></tr>
+</tbody></table>
+</div><h4 id="8-threads"><a class="doc-anchor" href="#8-threads">§</a>8 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
+<tr><td>Arc</td><td>48.91ns</td><td>20.00ns</td><td>65.56us</td><td>172.4ns</td><td>0.010%</td></tr>
+<tr><td>Root</td><td>186.8ns</td><td>30.00ns</td><td>729.9us</td><td>6.224us</td><td>0.000%</td></tr>
+<tr><td>Ref</td><td>109.4ns</td><td>30.00ns</td><td>1.136ms</td><td>5.817us</td><td>0.000%</td></tr>
+</tbody></table>
+</div><h4 id="16-threads"><a class="doc-anchor" href="#16-threads">§</a>16 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
+<tr><td>Arc</td><td>55.47ns</td><td>20.00ns</td><td>248.9us</td><td>354.6ns</td><td>0.010%</td></tr>
+<tr><td>Root</td><td>323.1ns</td><td>30.00ns</td><td>3.105ms</td><td>18.29us</td><td>0.000%</td></tr>
+<tr><td>Ref</td><td>206.6ns</td><td>30.00ns</td><td>3.492ms</td><td>16.00us</td><td>0.000%</td></tr>
+</tbody></table>
+</div><h4 id="32-threads"><a class="doc-anchor" href="#32-threads">§</a>32 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
+<tr><td>Arc</td><td>67.12ns</td><td>20.00ns</td><td>260.0us</td><td>783.3ns</td><td>0.001%</td></tr>
+<tr><td>Root</td><td>616.7ns</td><td>30.00ns</td><td>11.91ms</td><td>55.58us</td><td>0.000%</td></tr>
+<tr><td>Ref</td><td>432.5ns</td><td>30.00ns</td><td>13.66ms</td><td>49.14us</td><td>0.000%</td></tr>
+</tbody></table>
+</div><h4 id="authors-benchmark-summary"><a class="doc-anchor" href="#authors-benchmark-summary">§</a>Author’s Benchmark Summary</h4>
+<p>In these benchmarks, 100 allocations are collected into a pre-allocated <code>Vec</code>.
+The <code>Vec</code> is cleared, and then the process is repeated 1,000 total times
+yielding 100,000 total allocations.</p>
+<p>In both the <code>Root</code> and <code>Ref</code> benchmarks, explicit calls to
+<code>CollectorGuard::yield_to_collector()</code> are placed after the <code>Vec</code> is cleared.
+The measurements include time waiting for the incremental garbage collector to
+run during these yield points.</p>
+<p>The CPU that is executing the benchmarks listed above has 16 cores. As the
+numbers in the benchmarks show, the closer the CPU is to being fully saturated,
+the more garbage collection impacts the performance.</p>
+<p>There are plenty of opportunities to improve the performance, but incremental
+garbage collection requires pausing all threads briefly to perform the
+collection. These pauses are generally short when there are few active threads,
+but when many threads are active, the pauses can be significant.</p>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.CollectionGuard.html" title="struct musegc::CollectionGuard">CollectionGuard</a></div><div class="desc docblock-short">A guard that prevents garbage collection while held.</div></li><li><div class="item-name"><a class="struct" href="struct.Ref.html" title="struct musegc::Ref">Ref</a></div><div class="desc docblock-short">A reference to data stored in a garbage collector.</div></li><li><div class="item-name"><a class="struct" href="struct.Root.html" title="struct musegc::Root">Root</a></div><div class="desc docblock-short">A root reference to a <code>T</code> that has been allocated in the garbage collector.</div></li><li><div class="item-name"><a class="struct" href="struct.Tracer.html" title="struct musegc::Tracer">Tracer</a></div><div class="desc docblock-short">A tracer for the garbage collector.</div></li></ul><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="trait" href="trait.Collectable.html" title="trait musegc::Collectable">Collectable</a></div><div class="desc docblock-short">A type that can be garbage collected.</div></li><li><div class="item-name"><a class="trait" href="trait.ContainsNoCollectables.html" title="trait musegc::ContainsNoCollectables">ContainsNoCollectables</a></div><div class="desc docblock-short">A type that can be garbage collected that cannot contain any <a href="struct.Ref.html" title="struct musegc::Ref"><code>Ref&lt;T&gt;</code></a>s.</div></li></ul><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="fn" href="fn.collect.html" title="fn musegc::collect">collect</a></div><div class="desc docblock-short">Invokes the garbage collector.</div></li><li><div class="item-name"><a class="fn" href="fn.collected.html" title="fn musegc::collected">collected</a></div><div class="desc docblock-short">Executes <code>wrapped</code> with garbage collection available.</div></li></ul></section></div></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["collect","collected"],"struct":["CollectionGuard","Ref","Root","Tracer"],"trait":["Collectable","ContainsNoCollectables"]};

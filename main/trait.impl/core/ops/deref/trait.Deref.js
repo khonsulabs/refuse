@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"musegc":[["impl&lt;T&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/deref/trait.Deref.html\" title=\"trait core::ops::deref::Deref\">Deref</a> for <a class=\"struct\" href=\"musegc/struct.Root.html\" title=\"struct musegc::Root\">Root</a>&lt;T&gt;<div class=\"where\">where\n    T: <a class=\"trait\" href=\"musegc/trait.Collectable.html\" title=\"trait musegc::Collectable\">Collectable</a>,</div>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
