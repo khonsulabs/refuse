@@ -18,7 +18,7 @@ parking_lot = { version = "0.12.1", features = ["arc_lock"] }
 
 [dev-dependencies]
 criterion = "0.5"
-timings = { path = "../timings" }
+timings = { git = "https://github.com/khonsulabs/timings.git" }
 
 [lints.clippy]
 pedantic = "warn"
