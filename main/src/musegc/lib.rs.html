@@ -1548,8 +1548,6 @@
 <a href="#1546" id="1546">1546</a>
 <a href="#1547" id="1547">1547</a>
 <a href="#1548" id="1548">1548</a>
-<a href="#1549" id="1549">1549</a>
-<a href="#1550" id="1550">1550</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 #![warn(missing_docs)]
 </span><span class="kw">use </span>core::slice;
@@ -3069,11 +3067,9 @@
         <span class="kw">let </span>collected = Ref::new(<span class="number">42_u32</span>, <span class="kw-2">&amp;mut </span>guard);
 
         <span class="macro">assert_eq!</span>(collected.load(<span class="kw-2">&amp;</span>guard), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">42</span>));
-        drop(guard);
 
-        collect();
+        guard.collect();
 
-        <span class="kw">let </span>guard = CollectionGuard::acquire();
         <span class="macro">assert!</span>(collected.load(<span class="kw-2">&amp;</span>guard).is_none());
     });
 }
