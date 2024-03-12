@@ -1,8 +1,10 @@
+//! A multi-threaded benchmark
+
 use std::convert::Infallible;
 use std::hint::black_box;
 use std::sync::Arc;
 
-use musegc::{collected, CollectionGuard, Strong, Weak};
+use musegc::{collected, CollectionGuard, Ref, Root};
 use timings::{Benchmark, BenchmarkImplementation, Label, LabeledTimings, Timings};
 
 const TOTAL_ITERS: usize = 100_000;
@@ -15,8 +17,8 @@ fn main() {
     Benchmark::default()
         .with_each_number_of_threads([1, 4, 8, 16, 32])
         .with::<StdArc>()
-        .with::<GcWeak>()
-        .with::<GcStrong>()
+        .with::<GcRef>()
+        .with::<GcRoot>()
         .run(&timings)
         .unwrap();
 
@@ -71,11 +73,11 @@ impl BenchmarkImplementation<Label, (), Infallible> for StdArc {
     }
 }
 
-struct GcWeak {
+struct GcRef {
     metric: Label,
 }
 
-impl BenchmarkImplementation<Label, (), Infallible> for GcWeak {
+impl BenchmarkImplementation<Label, (), Infallible> for GcRef {
     type SharedConfig = Label;
 
     fn label(_number_of_threads: usize, _config: &()) -> Label {
@@ -102,13 +104,13 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcWeak {
     }
 
     fn measure(&mut self, measurements: &LabeledTimings<Label>) -> Result<(), Infallible> {
-        let mut allocated = Vec::<Weak<[u8; 32]>>::with_capacity(ITERS_PER_RELEASE);
+        let mut allocated = Vec::<Ref<[u8; 32]>>::with_capacity(ITERS_PER_RELEASE);
         collected(|| {
             let mut guard = CollectionGuard::acquire();
             for _ in 0..OUTER_ITERS {
                 for i in 0..ITERS_PER_RELEASE {
                     let timing = measurements.begin(self.metric.clone());
-                    let result = black_box(Weak::new([0; 32], &mut guard));
+                    let result = black_box(Ref::new([0; 32], &mut guard));
                     if i == ITERS_PER_RELEASE - 1 {
                         allocated.clear();
                         guard.yield_to_collector();
@@ -123,11 +125,11 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcWeak {
     }
 }
 
-struct GcStrong {
+struct GcRoot {
     metric: Label,
 }
 
-impl BenchmarkImplementation<Label, (), Infallible> for GcStrong {
+impl BenchmarkImplementation<Label, (), Infallible> for GcRoot {
     type SharedConfig = Label;
 
     fn label(_number_of_threads: usize, _config: &()) -> Label {
@@ -154,13 +156,13 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcStrong {
     }
 
     fn measure(&mut self, measurements: &LabeledTimings<Label>) -> Result<(), Infallible> {
-        let mut allocated = Vec::<Strong<[u8; 32]>>::with_capacity(ITERS_PER_RELEASE);
+        let mut allocated = Vec::<Root<[u8; 32]>>::with_capacity(ITERS_PER_RELEASE);
         collected(|| {
             let mut guard = CollectionGuard::acquire();
             for _ in 0..OUTER_ITERS {
                 for i in 0..ITERS_PER_RELEASE {
                     let timing = measurements.begin(self.metric.clone());
-                    let result = black_box(Strong::new([0; 32], &mut guard));
+                    let result = black_box(Root::new([0; 32], &mut guard));
                     if i == ITERS_PER_RELEASE - 1 {
                         allocated.clear();
                         guard.yield_to_collector();

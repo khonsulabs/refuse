@@ -1,14 +1,14 @@
-use musegc::{collected, CollectionGuard, Weak};
+use musegc::{collected, CollectionGuard, Ref};
 
 fn main() {
     // collected(|| {
     //     let mut guard = CollectionGuard::acquire();
     //     for _ in 0..1000 {
-    //         Weak::new([0; 32], &mut guard);
+    //         Ref::new([0; 32], &mut guard);
     //     }
     //     guard.collect();
     //     for _ in 0..1000 {
-    //         Weak::new([0; 32], &mut guard);
+    //         Ref::new([0; 32], &mut guard);
     //     }
     //     guard.collect();
     // });
@@ -17,9 +17,9 @@ fn main() {
             s.spawn(|| {
                 collected(|| {
                     let mut guard = CollectionGuard::acquire();
-                    for _ in 0..1000 {
+                    for _ in 0..100 {
                         for _ in 0..100 {
-                            Weak::new([0; 32], &mut guard);
+                            Ref::new([0; 32], &mut guard);
                         }
                         guard.yield_to_collector();
                     }

@@ -288,6 +288,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
+name = "intentional"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbc48117ac1523428c576e39831e93043112e2d2be0223bb0c0593af944e4e38"
+
+[[package]]
 name = "is-terminal"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -374,6 +380,7 @@ dependencies = [
  "criterion",
  "crossbeam-utils",
  "flume 0.11.0",
+ "intentional",
  "kempt",
  "nanorand",
  "parking_lot",

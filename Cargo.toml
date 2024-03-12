@@ -2,13 +2,13 @@
 name = "musegc"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+rust-version = "1.73.0"
 
 [dependencies]
 ahash = "0.8.11"
 crossbeam-utils = "0.8.19"
 flume = "0.11.0"
+intentional = "0.1.1"
 kempt = "0.2.3"
 nanorand = { version = "0.7.0", default-features = false, features = [
     "std",
@@ -19,6 +19,9 @@ parking_lot = { version = "0.12.1", features = ["arc_lock"] }
 [dev-dependencies]
 criterion = "0.5"
 timings = { path = "../timings" }
+
+[lints.clippy]
+pedantic = "warn"
 
 [[bench]]
 name = "vs-arc"

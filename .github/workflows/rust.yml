@@ -1,0 +1,51 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: hecrj/setup-rust-action@v1
+
+      - name: Run clippy
+        run: |
+          cargo clippy
+
+      - name: Run unit tests
+        run: |
+          cargo test --all-targets
+
+  miri:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: hecrj/setup-rust-action@v1
+        with:
+          components: cargo,rustc,rust-std,miri
+          rust-version: nightly
+
+      - name: Run unit tests
+        run: |
+          cargo +nightly miri test
+        env:
+          MIRIFLAGS: "-Zmiri-permissive-provenance -Zmiri-ignore-leaks"
+
+  build-msrv:
+    name: Test on MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: 1.65
+      - name: Run unit tests
+        run: cargo test --all-targets

@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 use core::slice;
 use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
@@ -10,14 +12,15 @@ use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
-use std::{array, ptr, thread};
+use std::{array, thread};
 
 use ahash::AHashMap;
 use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
+use intentional::{Assert, Cast};
 use kempt::Map;
 use nanorand::{Rng, WyRand};
 use parking_lot::lock_api::ArcRwLockReadGuard;
-use parking_lot::{Condvar, Mutex, RwLock};
+use parking_lot::{Condvar, Mutex, RwLock, RwLockWriteGuard};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 struct CollectorThreadId(u64);
@@ -41,7 +44,7 @@ impl CollectorCommand {
         GlobalCollector::get()
             .sender
             .send(self)
-            .expect("collector not running")
+            .expect("collector not running");
     }
 
     fn schedule_collect_if_needed() {
@@ -171,7 +174,7 @@ impl Collector {
                                 request.thread,
                                 &request.mark_one_sender,
                                 request.mark_bits,
-                            ))
+                            ));
                         }
                     }
                 });
@@ -213,7 +216,7 @@ impl Collector {
                         }
                     }
                     CollectorCommand::ScheduleCollect => {
-                        self.schedule_gc(Instant::now() + self.average_collection * 5)
+                        self.schedule_gc(Instant::now() + self.average_collection * 5);
                     }
                 }
             }
@@ -222,7 +225,7 @@ impl Collector {
             // full cleanup. Because of thread local storage limitations, this
             // may never execute on some platforms.
             drop(channels);
-        })
+        });
     }
 
     fn collect_and_notify(&mut self, channels: &CollectorThreadChannels) {
@@ -262,22 +265,21 @@ impl Collector {
             .store(false, Ordering::Relaxed);
     }
 
-    fn collect(&mut self, threads: &CollectorThreadChannels) -> CollectResult {
-        self.mark_bits = self.mark_bits.wrapping_add(1);
-        if self.mark_bits == 0 {
-            self.mark_bits = 1;
-        }
-
+    fn acquire_all_locks<'a>(
+        thread_bins: &'a AHashMap<CollectorThreadId, ThreadBins>,
+        start: Instant,
+        average_collection_locking: Duration,
+        pause_failures: u8,
+        rng: &mut WyRand,
+    ) -> Option<AHashMap<CollectorThreadId, RwLockWriteGuard<'a, Bins>>> {
         let mut all_bins = AHashMap::new();
-        let start = Instant::now();
         let mut now = start;
-        let force_gc = self.pause_failures >= 5;
-        let mut lock_wait = (self.average_collection_locking / 8).max(Duration::from_millis(
-            2 * u64::from(self.pause_failures + 1),
-        ));
+        let force_gc = pause_failures >= 5;
+        let mut lock_wait = (average_collection_locking / 8)
+            .max(Duration::from_millis(2 * u64::from(pause_failures + 1)));
         let long_lock_deadline = now + lock_wait * 8;
 
-        let mut bins_to_lock = self.thread_bins.keys().copied().collect::<Vec<_>>();
+        let mut bins_to_lock = thread_bins.keys().copied().collect::<Vec<_>>();
         while !bins_to_lock.is_empty() {
             let lock_deadline = now + lock_wait;
             let lock_deadline = if force_gc {
@@ -291,10 +293,7 @@ impl Collector {
             loop {
                 let thread = bins_to_lock[bin];
 
-                if let Some(locked) = self.thread_bins[&thread]
-                    .bins
-                    .try_write_until(lock_deadline)
-                {
+                if let Some(locked) = thread_bins[&thread].bins.try_write_until(lock_deadline) {
                     all_bins.insert(thread, locked);
                     bins_to_lock.remove(bin);
                     if bin > 0 {
@@ -310,18 +309,33 @@ impl Collector {
             if !bins_to_lock.is_empty() {
                 now = Instant::now();
                 lock_wait *= 2;
-                self.rng.shuffle(&mut bins_to_lock);
+                rng.shuffle(&mut bins_to_lock);
             }
         }
 
-        if !bins_to_lock.is_empty() {
-            drop(all_bins);
-            return CollectResult::CouldntRun;
+        bins_to_lock.is_empty().then_some(all_bins)
+    }
+
+    fn collect(&mut self, threads: &CollectorThreadChannels) -> CollectResult {
+        self.mark_bits = self.mark_bits.wrapping_add(1);
+        if self.mark_bits == 0 {
+            self.mark_bits = 1;
         }
+
+        let start = Instant::now();
+        let Some(mut all_bins) = Self::acquire_all_locks(
+            &self.thread_bins,
+            start,
+            self.average_collection_locking,
+            self.pause_failures,
+            &mut self.rng,
+        ) else {
+            self.pause_failures += 1;
+            return CollectResult::CouldntRun;
+        };
 
         let locking_time = start.elapsed();
         self.average_collection_locking = (locking_time + self.average_collection_locking * 2) / 3;
-
         self.pause_failures = 0;
 
         let (mark_one_sender, mark_ones) = flume::bounded(1024);
@@ -460,6 +474,15 @@ impl Drop for ThreadLocalBins {
     }
 }
 
+/// Executes `wrapped` with garbage collection available.
+///
+/// This function installs a garbage collector for this thread, if needed.
+/// Repeated and nested calls are allowed.
+///
+/// Invoking [`CollectionGuard::acquire()`] within `wrapped` will return a
+/// result, while invoking it outside of a collected context will panic.
+///
+/// This function utilizes Rust's thread-local storage.
 pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
     // We initialize the global collector by invoking get.
     GlobalCollector::get();
@@ -475,12 +498,40 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
 }
 
 type ArcRwBinGuard = ArcRwLockReadGuard<parking_lot::RawRwLock, Bins>;
+
+/// A guard that prevents garbage collection while held.
+///
+/// To perform garbage collection, all threads must be paused to be traced. A
+/// [`CollectionGuard`] allows the ability to read garbage-collectable data by
+/// ensuring the garbage collector can't run while it exists.
+///
+/// To ensure the garbage collector can run without long pauses, either:
+///
+/// - Acquire [`CollectionGuard`]s for short periods of time, dropping the
+///   guards when not needed.
+/// - Call [`CollectionGuard::yield_to_collector()`] at a regular basis. This
+///   function is very cheap to invoke if the collector is not trying to acquire
+///   the lock.
+///
+/// This type should not be held across potentially blocking operations such as
+/// IO, reading from a channel, or any other operation that may pause the
+/// current thread. [`CollectionGuard::while_unlocked()`] can be used to
+/// temporarily release a guard during a long operation.
 pub struct CollectionGuard {
     thread: ThreadLocalBins,
     inner: MaybeUninit<ArcRwBinGuard>,
 }
 
 impl CollectionGuard {
+    /// Manually invokes the garbage collector.
+    ///
+    /// This method temporarily releases this guard's lock and waits for a
+    /// garbage collection to run. If a garbage collection is already in
+    /// progress, this function will return when the in-progress collection
+    /// completes. Otherwise, the collector is started and this function waits
+    /// until the collection finishes.
+    ///
+    /// Finally, the guard is reacquired before returning.
     pub fn collect(&mut self) {
         // SAFETY: The guard is always present except during internal code which
         // never invokes this function. We can assume_init_mut since we have mut
@@ -491,6 +542,12 @@ impl CollectionGuard {
         ArcRwBinGuard::unlocked(guard, collect);
     }
 
+    /// Yield to the garbage collector, if needed.
+    ///
+    /// This function will not yield unless the garbage collector is trying to
+    /// acquire this thread's lock. Because of this, it is a fairly efficient
+    /// function to invoke. To minimize collection pauses, long-held guards
+    /// should call this function regularly.
     pub fn yield_to_collector(&mut self) {
         // SAFETY: The guard is always present except during internal code which
         // never invokes this function. We can assume_init_mut since we have mut
@@ -499,6 +556,17 @@ impl CollectionGuard {
         // force the compiler to invalidate any borrows.
         let guard = unsafe { self.inner.assume_init_mut() };
         ArcRwBinGuard::bump(guard);
+    }
+
+    /// Executes `unlocked` while this guard is temporarily released.
+    pub fn while_unlocked<R>(&mut self, unlocked: impl FnOnce() -> R) -> R {
+        // SAFETY: The guard is always present except during internal code which
+        // never invokes this function. We can assume_init_mut since we have mut
+        // reference to self. Because this function can invalidate references
+        // tied to this guard's lifetime, ownership of the guard is taken to
+        // force the compiler to invalidate any borrows.
+        let guard = unsafe { self.inner.assume_init_mut() };
+        ArcRwBinGuard::unlocked(guard, unlocked)
     }
 
     /// # Safety
@@ -532,6 +600,11 @@ impl CollectionGuard {
 }
 
 impl CollectionGuard {
+    /// Acquires a lock that prevents the garbage collector from running.
+    ///
+    /// This guard is used to provide read-only access to garbage collected
+    /// allocations.
+    #[must_use]
     pub fn acquire() -> Self {
         let thread = ThreadLocalBins::get();
         Self {
@@ -549,12 +622,26 @@ impl Drop for CollectionGuard {
     }
 }
 
+/// A type that can be garbage collected.
 pub trait Collectable: Send + Sync + 'static {
+    /// If true, this type may contain references and should have its `trace()`
+    /// function invoked during the collector's "mark" phase.
     const MAY_CONTAIN_REFERENCES: bool;
 
+    /// Traces all refrences that this value references.
+    ///
+    /// This function should invoke [`Tracer::mark()`] for each [`Ref<T>`] it
+    /// contains. Failing to do so will allow the garbage collector to free the
+    /// data, preventing the ability to [`load()`](Ref::load) the data in the
+    /// future.
     fn trace(&self, tracer: &mut Tracer);
 }
 
+/// A type that can be garbage collected that cannot contain any [`Ref<T>`]s.
+///
+/// Types that implement this trait automatically implement [`Collectable`].
+/// This trait reduces the boilerplate for implementing [`Collectable`] for
+/// self-contained types.
 pub trait ContainsNoCollectables {}
 
 impl<T> Collectable for T
@@ -591,6 +678,7 @@ where
         }
     }
 }
+
 impl<T, const N: usize> Collectable for [T; N]
 where
     T: Collectable,
@@ -604,31 +692,33 @@ where
     }
 }
 
-impl<T> Collectable for Strong<T>
+impl<T> Collectable for Root<T>
 where
     T: Collectable,
 {
     const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
 
     fn trace(&self, _tracer: &mut Tracer) {
-        // Strong<T> is already a root, thus calling trace on a Strong<T> has no
+        // Root<T> is already a root, thus calling trace on a Root<T> has no
         // effect.
     }
 }
 
-impl<T> Collectable for Weak<T>
+impl<T> Collectable for Ref<T>
 where
     T: Collectable,
 {
-    const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
+    const MAY_CONTAIN_REFERENCES: bool = true;
 
-    fn trace(&self, _tracer: &mut Tracer) {
-        // The only way for Weak<T>::trace to be invoked is by having been
-        // marked already. Thus, marking this weak would just generate extra
-        // traffic.
+    fn trace(&self, tracer: &mut Tracer) {
+        tracer.mark(*self);
     }
 }
 
+/// A tracer for the garbage collector.
+///
+/// This type allows [`Collectable`] values to [`mark()`](Self::mark) any
+/// [`Ref<T>`]s they contain.
 pub struct Tracer<'a> {
     tracing_thread: CollectorThreadId,
     mark_bit: u8,
@@ -648,40 +738,48 @@ impl<'a> Tracer<'a> {
         }
     }
 
-    pub fn mark<T>(&mut self, collected: Weak<T>)
+    /// Marks `collectable` as being referenced, ensuring it is not garbage
+    /// collected.
+    pub fn mark<T>(&mut self, collectable: Ref<T>)
     where
         T: Collectable,
     {
         self.mark_one_sender
             .send(MarkRequest {
-                thread: collected.creating_thread,
+                thread: collectable.creating_thread,
                 type_id: TypeId::of::<T>(),
-                slot_generation: collected.slot_generation,
-                bin_id: collected.bin_id,
+                slot_generation: collectable.slot_generation,
+                bin_id: collectable.bin_id,
                 mark_bits: self.mark_bit,
                 mark_one_sender: self.mark_one_sender.clone(),
             })
-            .expect("marker thread not running");
+            .assert("marker thread not running");
     }
 }
 
 #[test]
 fn size_of_types() {
-    assert_eq!(std::mem::size_of::<Strong<u32>>(), 24);
-    assert_eq!(std::mem::size_of::<Weak<u32>>(), 16);
+    assert_eq!(std::mem::size_of::<Root<u32>>(), 24);
+    assert_eq!(std::mem::size_of::<Ref<u32>>(), 16);
 }
 
-pub struct Strong<T>
+/// A root reference to a `T` that has been allocated in the garbage collector.
+///
+/// This type behaves very similarly to [`Arc<T>`]. It is cheap-to-clone,
+/// utilizing atomic reference counting to track the number of root references
+/// currently exist to the underlying value.
+///
+/// While any root references exist for a given allocation, the garbage
+/// collector will not collect the allocation.
+pub struct Root<T>
 where
     T: Collectable,
 {
     data: *const RefCounted<T>,
-    creating_thread: CollectorThreadId,
-    slot_generation: u32,
-    bin_id: BinId,
+    reference: Ref<T>,
 }
 
-impl<T> Strong<T>
+impl<T> Root<T>
 where
     T: Collectable,
 {
@@ -692,45 +790,47 @@ where
         let data = unsafe { guard.bins().allocated_slot_pointer::<T>(bin_id) };
         Self {
             data,
-            creating_thread: guard.thread.thread_id,
-            slot_generation,
-            bin_id,
+            reference: Ref {
+                creating_thread: guard.thread.thread_id,
+                slot_generation,
+                bin_id,
+                _t: PhantomData,
+            },
         }
     }
 
+    /// Stores `value` in the garbage collector, returning a root reference to
+    /// the data.
     pub fn new(value: T, guard: &mut CollectionGuard) -> Self {
         let (gen, bin) = guard.adopt(RefCounted::strong(value));
         Self::from_parts(gen, bin, guard)
     }
 
-    pub const fn downgrade(&self) -> Weak<T> {
-        Weak {
-            creating_thread: self.creating_thread,
-            slot_generation: self.slot_generation,
-            bin_id: self.bin_id,
-            _t: PhantomData,
-        }
+    /// Returns a "weak" reference to this root.
+    #[must_use]
+    pub const fn downgrade(&self) -> Ref<T> {
+        self.reference
     }
 
     fn ref_counted(&self) -> &RefCounted<T> {
         // SAFETY: The garbage collector will not collect data while we have a
         // strong count. The returned lifetime of the data is tied to `self`,
         // which ensures the returned lifetime is valid only for as long as this
-        // `Strong<T>` is alive.
+        // `Root<T>` is alive.
         unsafe { &(*self.data) }
     }
 }
 
-// SAFETY: Strong<T>'s usage of a pointer prevents auto implementation.
-// `Collectable` requires `Send`, and `Strong<T>` ensures proper Send + Sync
+// SAFETY: Root<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Root<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
-unsafe impl<T> Send for Strong<T> where T: Collectable {}
-// SAFETY: Strong<T>'s usage of a pointer prevents auto implementation.
-// `Collectable` requires `Send`, and `Strong<T>` ensures proper Send + Sync
+unsafe impl<T> Send for Root<T> where T: Collectable {}
+// SAFETY: Root<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Root<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
-unsafe impl<T> Sync for Strong<T> where T: Collectable {}
+unsafe impl<T> Sync for Root<T> where T: Collectable {}
 
-impl<T> Deref for Strong<T>
+impl<T> Deref for Root<T>
 where
     T: Collectable,
 {
@@ -741,28 +841,38 @@ where
     }
 }
 
-impl<T> Drop for Strong<T>
+impl<T> Drop for Root<T>
 where
     T: Collectable,
 {
     fn drop(&mut self) {
         if self.ref_counted().strong.fetch_sub(1, Ordering::Acquire) == 1 {
-            CollectorCommand::schedule_collect_if_needed()
+            CollectorCommand::schedule_collect_if_needed();
         }
     }
 }
 
-pub struct Weak<T> {
+/// A reference to data stored in a garbage collector.
+///
+/// Unlike a [`Root<T>`], this type is not guaranteed to have access to its
+/// underlying data. If no [`Collectable`] reachable via all active [`Root`]s
+/// marks this allocation, it will be collected.
+///
+/// Because of this, direct access to the data is not provided. To obtain a
+/// reference, call [`Ref::load()`].
+pub struct Ref<T> {
     creating_thread: CollectorThreadId,
     slot_generation: u32,
     bin_id: BinId,
     _t: PhantomData<fn(&T)>,
 }
 
-impl<T> Weak<T>
+impl<T> Ref<T>
 where
     T: Collectable,
 {
+    /// Stores `value` in the garbage collector, returning a "weak" reference to
+    /// it.
     pub fn new(value: T, guard: &mut CollectionGuard) -> Self {
         let (slot_generation, bin_id) = guard.adopt(RefCounted::weak(value));
 
@@ -774,6 +884,9 @@ where
         }
     }
 
+    /// Loads a reference to the underlying data. Returns `None` if the data has
+    /// been collected and is no longer available.
+    #[must_use]
     pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
         let type_id = TypeId::of::<T>();
         // SAFETY: The guard is always present except during allocation which
@@ -781,10 +894,10 @@ where
         let slabs = &unsafe { guard.bins() }
             .by_type
             .get(&type_id)
-            .expect("areas are never deallocated")
+            .assert("areas are never deallocated")
             .as_any()
             .downcast_ref::<Bin<T>>()
-            .expect("type mismatch")
+            .assert("type mismatch")
             .slabs;
         let slab = slabs.get(self.bin_id.slab() as usize)?;
         let slot = &slab.slots[usize::from(self.bin_id.slot())];
@@ -799,22 +912,22 @@ where
     }
 }
 
-impl<T> Clone for Weak<T> {
+impl<T> Clone for Ref<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T> Copy for Weak<T> {}
+impl<T> Copy for Ref<T> {}
 
-// SAFETY: Weak<T>'s usage of a pointer prevents auto implementation.
-// `Collectable` requires `Send`, and `Weak<T>` ensures proper Send + Sync
+// SAFETY: Ref<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Ref<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
-unsafe impl<T> Send for Weak<T> where T: Collectable {}
-// SAFETY: Weak<T>'s usage of a pointer prevents auto implementation.
-// `Collectable` requires `Send`, and `Weak<T>` ensures proper Send + Sync
+unsafe impl<T> Send for Ref<T> where T: Collectable {}
+// SAFETY: Ref<T>'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Ref<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
-unsafe impl<T> Sync for Weak<T> where T: Collectable {}
+unsafe impl<T> Sync for Ref<T> where T: Collectable {}
 
 #[derive(Default)]
 struct Bins {
@@ -960,10 +1073,10 @@ where
                 let strong_count =
                     unsafe { (*slot.value.get()).allocated.strong.load(Ordering::Relaxed) };
                 if strong_count > 0 {
-                    tracer.mark::<T>(Weak {
+                    tracer.mark::<T>(Ref {
                         creating_thread: tracer.tracing_thread,
                         slot_generation,
-                        bin_id: BinId::new(slab_index as u32, index as u8),
+                        bin_id: BinId::new(slab_index.cast::<u32>(), index.cast::<u8>()),
                         _t: PhantomData,
                     });
                 }
@@ -999,11 +1112,11 @@ where
             {
                 match slot.sweep(mark_bits, free_head) {
                     SlotSweepStatus::Swept => {
-                        free_head = BinId::new(slab_index as u32, slot_index as u8);
+                        free_head = BinId::new(slab_index.cast::<u32>(), slot_index.cast::<u8>());
                     }
                     SlotSweepStatus::Allocated => {
                         allocated += 1;
-                        last_allocated = slot_index as u8;
+                        last_allocated = slot_index.cast::<u8>();
                     }
                     SlotSweepStatus::NotAllocated => {}
                 }
@@ -1042,6 +1155,7 @@ impl BinId {
         (self.0 >> 8) - 1
     }
 
+    #[allow(clippy::cast_possible_truncation)] // intentional
     const fn slot(self) -> u8 {
         self.0 as u8
     }
@@ -1050,7 +1164,7 @@ impl BinId {
 struct Slabs<T> {
     offset: usize,
     first_free_slab: Cell<usize>,
-    slabs: [UnsafeCell<Option<Box<Slab<T>>>>; 256],
+    slab_slots: [UnsafeCell<Option<Box<Slab<T>>>>; 256],
     next: UnsafeCell<Option<Box<Slabs<T>>>>,
 }
 
@@ -1063,7 +1177,7 @@ where
         Self {
             offset,
             first_free_slab: Cell::new(0),
-            slabs: array::from_fn(|index| {
+            slab_slots: array::from_fn(|index| {
                 UnsafeCell::new(if index == 0 {
                     Some(Slab::new(initial_value.take().expect("only called once")))
                 } else {
@@ -1078,7 +1192,7 @@ where
         if index < 256 {
             // SAFETY: Slabs are always initialized and this function ties the
             // lifetime of the slab to `self`.
-            unsafe { (*self.slabs[index].get()).as_ref() }.map(|slab| &**slab)
+            unsafe { (*self.slab_slots[index].get()).as_ref() }.map(|slab| &**slab)
         } else {
             // SAFETY: Slabs are always initialized and this function ties the
             // lifetime of the slab to `self`.
@@ -1092,7 +1206,7 @@ where
         for index in first_free..256 {
             // SAFETY: Slabs are always initialized and this
             // function ties the lifetime of the slab to `this`.
-            let slab = unsafe { &mut (*self.slabs[index].get()) };
+            let slab = unsafe { &mut (*self.slab_slots[index].get()) };
 
             if let Some(slab) = slab {
                 match slab.try_adopt(value, index + self.offset) {
@@ -1106,7 +1220,7 @@ where
                 }
             } else {
                 *slab = Some(Slab::new(value));
-                return (0, BinId::new(index as u32, 0), None);
+                return (0, BinId::new(index.cast::<u32>(), 0), None);
             }
         }
 
@@ -1116,19 +1230,23 @@ where
             next.adopt(value)
         } else {
             let slabs = Box::new(Slabs::new(value, self.offset + 256));
-            let new_tail = ptr::from_ref(&*slabs);
+            let new_tail: *const Slabs<T> = &*slabs;
 
             // SAFETY: next is never accessed by any other thread except the
             // thread that owns this set of bins.
             unsafe { self.next.get().write(Some(slabs)) };
 
-            (0, BinId::new(self.offset as u32 + 256, 0), Some(new_tail))
+            (
+                0,
+                BinId::new(self.offset.cast::<u32>() + 256, 0),
+                Some(new_tail),
+            )
         }
     }
 
     fn iter(&self) -> SlabsIter<'_, T> {
         SlabsIter {
-            slabs: self.slabs.iter(),
+            slabs: self.slab_slots.iter(),
             this: self,
         }
     }
@@ -1210,7 +1328,7 @@ impl<T> Slab<T> {
             let slot = &self.slots[usize::from(slot_index)];
             let generation = slot.allocate(value);
 
-            Ok((generation, BinId::new(slab_index as u32, slot_index)))
+            Ok((generation, BinId::new(slab_index.cast::<u32>(), slot_index)))
         } else {
             Err(value)
         }
@@ -1301,12 +1419,12 @@ impl SlotState {
 
     fn generation(&self) -> Option<u32> {
         let state = self.0.load(Ordering::Relaxed);
-        (state & Self::ALLOCATED != 0).then_some(state as u32)
+        (state & Self::ALLOCATED != 0).then(|| state.cast::<u32>())
     }
 
     fn allocated_with_generation(&self, generation: u32) -> bool {
         let state = self.0.load(Ordering::Relaxed);
-        state & Self::ALLOCATED != 0 && state as u32 == generation
+        state & Self::ALLOCATED != 0 && state.cast::<u32>() == generation
     }
 
     fn try_allocate(&self) -> Option<u32> {
@@ -1315,9 +1433,9 @@ impl SlotState {
             .0
             .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
                 (state & Self::ALLOCATED == 0).then(|| {
-                    let generation = (state as u32).wrapping_add(1);
+                    let generation = state.cast::<u32>().wrapping_add(1);
                     new_generation = Some(generation);
-                    Self::ALLOCATED | generation as u64
+                    Self::ALLOCATED | u64::from(generation)
                 })
             })
             .is_ok()
@@ -1332,16 +1450,16 @@ impl SlotState {
         let state = self.0.load(Ordering::Acquire);
         debug_assert_eq!(state & Self::ALLOCATED, 0);
 
-        let generation = (state as u32).wrapping_add(1);
+        let generation = state.cast::<u32>().wrapping_add(1);
 
         self.0
-            .store(Self::ALLOCATED | generation as u64, Ordering::Release);
+            .store(Self::ALLOCATED | u64::from(generation), Ordering::Release);
         generation
     }
 
     fn mark(&self, mark_bits: u8, slot_generation: u32) -> bool {
         let mut state = self.0.load(Ordering::Acquire);
-        if state & Self::ALLOCATED == 0 || state as u32 != slot_generation {
+        if state & Self::ALLOCATED == 0 || state.cast::<u32>() != slot_generation {
             return false;
         }
 
@@ -1368,8 +1486,8 @@ impl SlotState {
             return SlotSweepStatus::Allocated;
         }
 
-        let generation = state as u32;
-        self.0.store(generation as u64, Ordering::Release);
+        let generation = state.cast::<u32>();
+        self.0.store(u64::from(generation), Ordering::Release);
         SlotSweepStatus::Swept
     }
 }
@@ -1381,6 +1499,11 @@ enum SlotSweepStatus {
     Swept,
 }
 
+/// Invokes the garbage collector.
+///
+/// This function will deadlock if any [`CollectionGuard`]s are held by the
+/// current thread when invoked. If a guard is held, consider calling
+/// [`CollectionGuard::collect()`] instead.
 pub fn collect() {
     let now = Instant::now();
     CollectorCommand::Collect(now).send();
@@ -1391,30 +1514,30 @@ pub fn collect() {
 fn weak_lifecycle() {
     collected(|| {
         let mut guard = CollectionGuard::acquire();
-        let collected = Weak::new(42_u32, &mut guard);
+        let collected = Ref::new(42_u32, &mut guard);
 
-        assert_eq!(collected.load(&guard).cloned(), Some(42));
+        assert_eq!(collected.load(&guard), Some(&42));
         drop(guard);
 
         collect();
 
         let guard = CollectionGuard::acquire();
         assert!(collected.load(&guard).is_none());
-    })
+    });
 }
 
 #[test]
 fn strong_lifecycle() {
     collected(|| {
         let mut guard = CollectionGuard::acquire();
-        let strong = Strong::new(42_u32, &mut guard);
+        let strong = Root::new(42_u32, &mut guard);
         let weak = strong.downgrade();
 
-        assert_eq!(weak.load(&guard).cloned(), Some(42));
+        assert_eq!(weak.load(&guard), Some(&42));
 
         // This collection should not remove anything.
         guard.collect();
-        assert_eq!(weak.load(&guard).cloned(), Some(42));
+        assert_eq!(weak.load(&guard), Some(&42));
 
         // Drop the strong reference
         drop(strong);
@@ -1423,5 +1546,5 @@ fn strong_lifecycle() {
         guard.collect();
 
         assert!(weak.load(&guard).is_none());
-    })
+    });
 }
