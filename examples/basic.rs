@@ -20,13 +20,13 @@ fn main() {
 
         // Accessing the data contained in a `Ref` requires a guard, however.
         let mut guard = CollectionGuard::acquire();
-        assert_eq!(one.load(&guard).unwrap(), Some(&1));
-        assert_eq!(two.load(&guard).unwrap(), Some(&2));
-        assert_eq!(three.load(&guard).unwrap(), Some(&3));
+        assert_eq!(one.load(&guard), Some(&1));
+        assert_eq!(two.load(&guard), Some(&2));
+        assert_eq!(three.load(&guard), Some(&3));
 
         // Dropping our root will allow the collector to free our `Ref`s.
         drop(values);
         guard.collect();
-        assert_eq!(one.load(&guard).unwrap(), None);
+        assert_eq!(one.load(&guard), None);
     });
 }

@@ -6,10 +6,10 @@ fn lifecycle() {
         let mut guard = CollectionGuard::acquire();
         let collected = Ref::new(42_u32, &mut guard);
 
-        assert_eq!(collected.load(&guard).unwrap(), Some(&42));
+        assert_eq!(collected.load(&guard), Some(&42));
 
         guard.collect();
 
-        assert_eq!(collected.load(&guard).unwrap(), None);
+        assert_eq!(collected.load(&guard), None);
     });
 }

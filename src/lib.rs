@@ -8,7 +8,7 @@ use std::mem::{ManuallyDrop, MaybeUninit};
 use std::num::NonZeroUsize;
 use std::ops::Deref;
 use std::panic::AssertUnwindSafe;
-use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, Ordering};
+use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock, Weak};
 use std::time::{Duration, Instant};
 use std::{array, thread};
@@ -17,7 +17,6 @@ use ahash::AHashMap;
 use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
 use intentional::{Assert, Cast};
 use kempt::Map;
-use nanorand::{Rng, WyRand};
 use parking_lot::lock_api::ArcRwLockReadGuard;
 use parking_lot::{Condvar, Mutex, RwLock, RwLockWriteGuard};
 
@@ -71,8 +70,11 @@ struct ThreadBins {
 
 struct CollectorInfo {
     info: Mutex<CollectorInfoData>,
-    sync: Condvar,
+    collection_sync: Condvar,
+    collector_sync: Condvar,
     signalled_collector: AtomicBool,
+    collecting: AtomicBool,
+    readers: AtomicUsize,
     all_threads: AllThreadBins,
 }
 
@@ -80,7 +82,7 @@ impl CollectorInfo {
     fn wait_for_collection(&self, requested_at: Instant) {
         let mut info = self.info.lock();
         while info.last_run < requested_at {
-            self.sync.wait(&mut info);
+            self.collection_sync.wait(&mut info);
         }
     }
 }
@@ -117,7 +119,6 @@ struct Collector {
     mark_bits: u8,
     next_gc: Option<Instant>,
     pause_failures: u8,
-    rng: WyRand,
     average_collection: Duration,
     average_collection_locking: Duration,
 }
@@ -132,7 +133,6 @@ impl Collector {
             mark_bits: 0,
             next_gc: None,
             pause_failures: 0,
-            rng: WyRand::new(),
             average_collection: Duration::from_millis(1),
             average_collection_locking: Duration::from_millis(1),
         }
@@ -261,7 +261,7 @@ impl Collector {
         let mut info = self.shared.info.lock();
         info.last_run = gc_finish;
         drop(info);
-        self.shared.sync.notify_all();
+        self.shared.collection_sync.notify_all();
         self.shared
             .signalled_collector
             .store(false, Ordering::Relaxed);
@@ -272,50 +272,67 @@ impl Collector {
         start: Instant,
         average_collection_locking: Duration,
         pause_failures: u8,
-        rng: &mut WyRand,
+        collector: &CollectorInfo,
     ) -> Option<AHashMap<CollectorThreadId, RwLockWriteGuard<'a, Bins>>> {
-        let mut all_bins = AHashMap::new();
-        let mut now = start;
         let force_gc = pause_failures >= 5;
-        let mut lock_wait = (average_collection_locking / 8)
+        let lock_wait = (average_collection_locking / 8)
             .max(Duration::from_millis(2 * u64::from(pause_failures + 1)));
-        let long_lock_deadline = now + lock_wait * 8;
+        let long_lock_deadline = start + lock_wait * 8;
 
-        let mut bins_to_lock = thread_bins.keys().copied().collect::<Vec<_>>();
-        while !bins_to_lock.is_empty() {
-            let lock_deadline = now + lock_wait;
-            let lock_deadline = if force_gc {
-                lock_deadline
-            } else if long_lock_deadline < now {
-                break;
-            } else {
-                long_lock_deadline.min(lock_deadline)
-            };
-            let mut bin = bins_to_lock.len() - 1;
-            loop {
-                let thread = bins_to_lock[bin];
-
-                if let Some(locked) = thread_bins[&thread].bins.try_write_until(lock_deadline) {
-                    all_bins.insert(thread, locked);
-                    bins_to_lock.remove(bin);
-                    if bin > 0 {
-                        bin -= 1;
-                    } else {
-                        break;
-                    }
-                } else {
-                    // Timeout
-                    break;
-                }
-            }
-            if !bins_to_lock.is_empty() {
-                now = Instant::now();
-                lock_wait *= 2;
-                rng.shuffle(&mut bins_to_lock);
+        let mut info_data = collector.info.lock();
+        while collector.readers.load(Ordering::Acquire) > 0 {
+            if force_gc {
+                collector.collection_sync.wait(&mut info_data);
+            } else if collector
+                .collector_sync
+                .wait_until(&mut info_data, long_lock_deadline)
+                .timed_out()
+            {
+                return None;
             }
         }
 
-        bins_to_lock.is_empty().then_some(all_bins)
+        Some(
+            thread_bins
+                .iter()
+                .map(|(thread_id, bins)| (*thread_id, bins.bins.write()))
+                .collect(),
+        )
+        // let mut bins_to_lock = thread_bins.keys().copied().collect::<Vec<_>>();
+        // while !bins_to_lock.is_empty() {
+        //     let lock_deadline = now + lock_wait;
+        //     let lock_deadline = if force_gc {
+        //         lock_deadline
+        //     } else if long_lock_deadline < now {
+        //         break;
+        //     } else {
+        //         long_lock_deadline.min(lock_deadline)
+        //     };
+        //     let mut bin = bins_to_lock.len() - 1;
+        //     loop {
+        //         let thread = bins_to_lock[bin];
+
+        //         if let Some(locked) = thread_bins[&thread].bins.try_write_until(lock_deadline) {
+        //             all_bins.insert(thread, locked);
+        //             bins_to_lock.remove(bin);
+        //             if bin > 0 {
+        //                 bin -= 1;
+        //             } else {
+        //                 break;
+        //             }
+        //         } else {
+        //             // Timeout
+        //             break;
+        //         }
+        //     }
+        //     if !bins_to_lock.is_empty() {
+        //         now = Instant::now();
+        //         lock_wait *= 2;
+        //         rng.shuffle(&mut bins_to_lock);
+        //     }
+        // }
+
+        // bins_to_lock.is_empty().then_some(all_bins)
     }
 
     fn collect(&mut self, threads: &CollectorThreadChannels) -> CollectResult {
@@ -330,7 +347,7 @@ impl Collector {
             start,
             self.average_collection_locking,
             self.pause_failures,
-            &mut self.rng,
+            &self.shared,
         ) else {
             self.pause_failures += 1;
             return CollectResult::CouldntRun;
@@ -437,8 +454,11 @@ impl GlobalCollector {
                 info: Mutex::new(CollectorInfoData {
                     last_run: Instant::now(),
                 }),
-                sync: Condvar::new(),
+                collection_sync: Condvar::new(),
+                collector_sync: Condvar::new(),
                 signalled_collector: AtomicBool::new(false),
+                collecting: AtomicBool::new(false),
+                readers: AtomicUsize::new(0),
                 all_threads: AllThreadBins::default(),
             });
             thread::Builder::new()
@@ -511,6 +531,49 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
 
 type ArcRwBinGuard = ArcRwLockReadGuard<parking_lot::RawRwLock, Bins>;
 
+struct CollectorReadGuard {
+    global: &'static CollectorInfo,
+}
+
+impl CollectorReadGuard {
+    fn acquire() -> Self {
+        let mut this = Self {
+            global: &GlobalCollector::get().info,
+        };
+        this.acquire_reader();
+        this
+    }
+
+    fn acquire_reader(&mut self) {
+        loop {
+            if self.global.collecting.load(Ordering::Acquire) {
+                let mut info_data = self.global.info.lock();
+                while self.global.collecting.load(Ordering::Acquire) {
+                    self.global.collection_sync.wait(&mut info_data);
+                }
+            }
+
+            self.global.readers.fetch_add(1, Ordering::Acquire);
+            if self.global.collecting.load(Ordering::Acquire) {
+                self.release_reader();
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn release_reader(&mut self) {
+        self.global.readers.fetch_sub(1, Ordering::Acquire);
+        self.global.collector_sync.notify_one();
+    }
+}
+
+impl Drop for CollectorReadGuard {
+    fn drop(&mut self) {
+        self.release_reader();
+    }
+}
+
 /// A guard that prevents garbage collection while held.
 ///
 /// To perform garbage collection, all threads must be paused to be traced. A
@@ -530,11 +593,32 @@ type ArcRwBinGuard = ArcRwLockReadGuard<parking_lot::RawRwLock, Bins>;
 /// current thread. [`CollectionGuard::while_unlocked()`] can be used to
 /// temporarily release a guard during a long operation.
 pub struct CollectionGuard {
+    collector: CollectorReadGuard,
     thread: ThreadLocalBins,
     inner: MaybeUninit<ArcRwBinGuard>,
 }
 
 impl CollectionGuard {
+    /// Acquires a lock that prevents the garbage collector from running.
+    ///
+    /// This guard is used to provide read-only access to garbage collected
+    /// allocations.
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if this function is called outside of code executed
+    /// by [`collected()`].
+    #[must_use]
+    pub fn acquire() -> Self {
+        let collector = CollectorReadGuard::acquire();
+        let thread = ThreadLocalBins::get();
+        Self {
+            collector,
+            inner: MaybeUninit::new(thread.bins.read_arc()),
+            thread,
+        }
+    }
+
     /// Manually invokes the garbage collector.
     ///
     /// This method temporarily releases this guard's lock and waits for a
@@ -545,13 +629,7 @@ impl CollectionGuard {
     ///
     /// Finally, the guard is reacquired before returning.
     pub fn collect(&mut self) {
-        // SAFETY: The guard is always present except during internal code which
-        // never invokes this function. We can assume_init_mut since we have mut
-        // reference to self. Because this function can invalidate references
-        // tied to this guard's lifetime, ownership of the guard is taken to
-        // force the compiler to invalidate any borrows.
-        let guard = unsafe { self.inner.assume_init_mut() };
-        ArcRwBinGuard::unlocked(guard, collect);
+        self.while_unlocked(collect);
     }
 
     /// Yield to the garbage collector, if needed.
@@ -561,24 +639,36 @@ impl CollectionGuard {
     /// function to invoke. To minimize collection pauses, long-held guards
     /// should call this function regularly.
     pub fn yield_to_collector(&mut self) {
-        // SAFETY: The guard is always present except during internal code which
-        // never invokes this function. We can assume_init_mut since we have mut
-        // reference to self. Because this function can invalidate references
-        // tied to this guard's lifetime, ownership of the guard is taken to
-        // force the compiler to invalidate any borrows.
-        let guard = unsafe { self.inner.assume_init_mut() };
-        ArcRwBinGuard::bump(guard);
+        if self.collector.global.collecting.load(Ordering::Relaxed) {
+            self.collector.release_reader();
+
+            // SAFETY: The guard is always present except during internal code which
+            // never invokes this function. We can assume_init_mut since we have mut
+            // reference to self. Because this function can invalidate references
+            // tied to this guard's lifetime, ownership of the guard is taken to
+            // force the compiler to invalidate any borrows.
+            let guard = unsafe { self.inner.assume_init_mut() };
+            ArcRwBinGuard::unlocked(guard, || {
+                self.collector.acquire_reader();
+            });
+        }
     }
 
     /// Executes `unlocked` while this guard is temporarily released.
     pub fn while_unlocked<R>(&mut self, unlocked: impl FnOnce() -> R) -> R {
+        self.collector.release_reader();
+
         // SAFETY: The guard is always present except during internal code which
         // never invokes this function. We can assume_init_mut since we have mut
         // reference to self. Because this function can invalidate references
         // tied to this guard's lifetime, ownership of the guard is taken to
         // force the compiler to invalidate any borrows.
         let guard = unsafe { self.inner.assume_init_mut() };
-        ArcRwBinGuard::unlocked(guard, unlocked)
+        let result = ArcRwBinGuard::unlocked(guard, unlocked);
+
+        self.collector.acquire_reader();
+
+        result
     }
 
     /// # Safety
@@ -607,26 +697,6 @@ impl CollectionGuard {
                     std::panic::resume_unwind(panic)
                 }
             }
-        }
-    }
-}
-
-impl CollectionGuard {
-    /// Acquires a lock that prevents the garbage collector from running.
-    ///
-    /// This guard is used to provide read-only access to garbage collected
-    /// allocations.
-    ///
-    /// # Panics
-    ///
-    /// A panic will occur if this function is called outside of code executed
-    /// by [`collected()`].
-    #[must_use]
-    pub fn acquire() -> Self {
-        let thread = ThreadLocalBins::get();
-        Self {
-            inner: MaybeUninit::new(thread.bins.read_arc()),
-            thread,
         }
     }
 }
@@ -926,11 +996,8 @@ where
             )
     }
 
-    fn load_slot<'guard>(
-        &self,
-        guard: &'guard CollectionGuard,
-    ) -> Result<Option<&'guard RefCounted<T>>, CollectionStarting> {
-        Ok(if guard.thread.thread_id == self.creating_thread {
+    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard RefCounted<T>> {
+        if guard.thread.thread_id == self.creating_thread {
             self.load_slot_from(
                 &{
                     // SAFETY: The guard is always present except during allocation which
@@ -942,19 +1009,13 @@ where
             )
         } else {
             let all_threads = guard.thread.all_threads.read();
-            let Some(other_thread_bins) = all_threads
+            let other_thread_bins = all_threads
                 .get(&self.creating_thread)
-                .and_then(Weak::upgrade)
-            else {
-                return Ok(None);
-            };
-            let result = match other_thread_bins.try_read() {
-                Some(other_thread) => self.load_slot_from(&other_thread.by_type, guard),
-                None => return Err(CollectionStarting),
-            };
+                .and_then(Weak::upgrade)?;
+            let result = self.load_slot_from(&other_thread_bins.read().by_type, guard);
             drop(other_thread_bins);
             result
-        })
+        }
     }
 
     /// Loads a reference to the underlying data. Returns `None` if the data has
@@ -964,11 +1025,9 @@ where
     ///
     /// Returns `CollectionStarting` if `self` was created in another thread and
     /// that thread is currently locked by the garbage collector.
-    pub fn load<'guard>(
-        &self,
-        guard: &'guard CollectionGuard,
-    ) -> Result<Option<&'guard T>, CollectionStarting> {
-        Ok(self.load_slot(guard)?.map(|allocated| &allocated.value))
+    #[must_use]
+    pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
+        self.load_slot(guard).map(|allocated| &allocated.value)
     }
 
     /// Loads a root reference to the underlying data. Returns `None` if the
@@ -978,14 +1037,15 @@ where
     ///
     /// Returns `CollectionStarting` if `self` was created in another thread and
     /// that thread is currently locked by the garbage collector.
-    pub fn as_root(&self, guard: &CollectionGuard) -> Result<Option<Root<T>>, CollectionStarting> {
-        Ok(self.load_slot(guard)?.map(|allocated| {
+    #[must_use]
+    pub fn as_root(&self, guard: &CollectionGuard) -> Option<Root<T>> {
+        self.load_slot(guard).map(|allocated| {
             allocated.strong.fetch_add(1, Ordering::Acquire);
             Root {
                 data: allocated,
                 reference: *self,
             }
-        }))
+        })
     }
 }
 

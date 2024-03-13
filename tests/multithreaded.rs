@@ -5,10 +5,8 @@ use std::thread;
 use std::time::Duration;
 
 use flume::{Receiver, Sender};
-use musegc::{
-    collected, Collectable, CollectionGuard, CollectionStarting, ContainsNoCollectables, Ref, Root,
-};
-use parking_lot::{Mutex, MutexGuard};
+use musegc::{collected, Collectable, CollectionGuard, ContainsNoCollectables, Ref, Root};
+use parking_lot::Mutex;
 
 const WORK_ITERS: usize = 100;
 const WORK_ITEMS: usize = 100;
@@ -77,24 +75,19 @@ fn thread_worker(
                 queue.items.push(work.downgrade());
             }
             Command::Work => {
-                let mut guard = CollectionGuard::acquire();
+                let guard = CollectionGuard::acquire();
                 let mut queue = state.queue.lock();
                 if queue.items.is_empty() {
                     next_thread
                         .send(Command::Work)
                         .expect("next thread disconnted");
                 } else {
-                    let work = loop {
-                        match queue.items[0].as_root(&guard) {
-                            Ok(Some(work)) => {
-                                queue.items.remove(0);
-                                break work;
-                            }
-                            Err(CollectionStarting) => {
-                                MutexGuard::unlocked(&mut queue, || guard.yield_to_collector());
-                            }
-                            Ok(None) => unreachable!("missing work"),
+                    let work = match queue.items[0].as_root(&guard) {
+                        Some(work) => {
+                            queue.items.remove(0);
+                            work
                         }
+                        None => unreachable!("missing work"),
                     };
                     if work.counter.fetch_sub(1, Ordering::Acquire) > 1 {
                         next_thread
