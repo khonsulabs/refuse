@@ -20,13 +20,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("alloc-drop");
     group.bench_function("arc", |b| b.iter(|| black_box(arc_string())));
     collected(|| {
-        group.bench_function("weak", |b| {
+        group.bench_function("ref", |b| {
             b.iter(move || {
                 let mut guard = CollectionGuard::acquire();
                 black_box(weak_string(&mut guard))
             });
         });
-        group.bench_function("strong", |b| {
+        group.bench_function("root", |b| {
             b.iter(move || {
                 let mut guard = CollectionGuard::acquire();
                 black_box(strong_string(&mut guard))

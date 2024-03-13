@@ -81,7 +81,7 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcRef {
     type SharedConfig = Label;
 
     fn label(_number_of_threads: usize, _config: &()) -> Label {
-        Label::from("Weak")
+        Label::from("Ref")
     }
 
     fn initialize_shared_config(
@@ -133,7 +133,7 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcRoot {
     type SharedConfig = Label;
 
     fn label(_number_of_threads: usize, _config: &()) -> Label {
-        Label::from("Strong")
+        Label::from("Root")
     }
 
     fn initialize_shared_config(

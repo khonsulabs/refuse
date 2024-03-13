@@ -4,10 +4,9 @@ use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
 use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 use std::marker::PhantomData;
-use std::mem::{ManuallyDrop, MaybeUninit};
+use std::mem::ManuallyDrop;
 use std::num::NonZeroUsize;
 use std::ops::Deref;
-use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock, Weak};
 use std::time::{Duration, Instant};
@@ -17,8 +16,7 @@ use ahash::AHashMap;
 use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
 use intentional::{Assert, Cast};
 use kempt::Map;
-use parking_lot::lock_api::ArcRwLockReadGuard;
-use parking_lot::{Condvar, Mutex, RwLock, RwLockWriteGuard};
+use parking_lot::{Condvar, Mutex, RwLock};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 struct CollectorThreadId(u64);
@@ -31,7 +29,7 @@ impl CollectorThreadId {
 }
 
 enum CollectorCommand {
-    NewThread(CollectorThreadId, Arc<RwLock<Bins>>),
+    NewThread(CollectorThreadId, Arc<UnsafeBins>),
     ThreadShutdown(CollectorThreadId),
     Collect(Instant),
     ScheduleCollect,
@@ -61,11 +59,11 @@ impl CollectorCommand {
     }
 }
 
-type AllThreadBins = Arc<RwLock<AHashMap<CollectorThreadId, Weak<RwLock<Bins>>>>>;
+type AllThreadBins = Arc<RwLock<AHashMap<CollectorThreadId, Weak<UnsafeBins>>>>;
 
 struct ThreadBins {
     alive: bool,
-    bins: Arc<RwLock<Bins>>,
+    bins: Arc<UnsafeBins>,
 }
 
 struct CollectorInfo {
@@ -273,7 +271,7 @@ impl Collector {
         average_collection_locking: Duration,
         pause_failures: u8,
         collector: &CollectorInfo,
-    ) -> Option<AHashMap<CollectorThreadId, RwLockWriteGuard<'a, Bins>>> {
+    ) -> Option<AHashMap<CollectorThreadId, &'a mut Bins>> {
         let force_gc = pause_failures >= 5;
         let lock_wait = (average_collection_locking / 8)
             .max(Duration::from_millis(2 * u64::from(pause_failures + 1)));
@@ -295,44 +293,9 @@ impl Collector {
         Some(
             thread_bins
                 .iter()
-                .map(|(thread_id, bins)| (*thread_id, bins.bins.write()))
+                .map(|(thread_id, bins)| (*thread_id, unsafe { bins.bins.assume_mut() }))
                 .collect(),
         )
-        // let mut bins_to_lock = thread_bins.keys().copied().collect::<Vec<_>>();
-        // while !bins_to_lock.is_empty() {
-        //     let lock_deadline = now + lock_wait;
-        //     let lock_deadline = if force_gc {
-        //         lock_deadline
-        //     } else if long_lock_deadline < now {
-        //         break;
-        //     } else {
-        //         long_lock_deadline.min(lock_deadline)
-        //     };
-        //     let mut bin = bins_to_lock.len() - 1;
-        //     loop {
-        //         let thread = bins_to_lock[bin];
-
-        //         if let Some(locked) = thread_bins[&thread].bins.try_write_until(lock_deadline) {
-        //             all_bins.insert(thread, locked);
-        //             bins_to_lock.remove(bin);
-        //             if bin > 0 {
-        //                 bin -= 1;
-        //             } else {
-        //                 break;
-        //             }
-        //         } else {
-        //             // Timeout
-        //             break;
-        //         }
-        //     }
-        //     if !bins_to_lock.is_empty() {
-        //         now = Instant::now();
-        //         lock_wait *= 2;
-        //         rng.shuffle(&mut bins_to_lock);
-        //     }
-        // }
-
-        // bins_to_lock.is_empty().then_some(all_bins)
     }
 
     fn collect(&mut self, threads: &CollectorThreadChannels) -> CollectResult {
@@ -361,12 +324,13 @@ impl Collector {
         let mark_one_sender = Arc::new(mark_one_sender);
 
         for (id, bins) in &mut all_bins {
-            for i in 0..bins.by_type.len() {
+            let by_type = bins.by_type.read();
+            for i in 0..by_type.len() {
                 threads
                     .tracer
                     .send(TraceRequest {
                         thread: *id,
-                        bins: bins.by_type.field(i).expect("length checked").value.clone(),
+                        bins: by_type.field(i).expect("length checked").value.clone(),
                         mark_bits: self.mark_bits,
                         mark_one_sender: mark_one_sender.clone(),
                     })
@@ -400,6 +364,7 @@ impl Collector {
 
             let bins = all_bins[&thread]
                 .by_type
+                .read()
                 .get(&type_id)
                 .expect("areas are never deallocated")
                 .clone();
@@ -414,9 +379,9 @@ impl Collector {
 
         atomic::fence(Ordering::Acquire);
         let mut threads_to_remove = Vec::new();
-        for (key, mut bins) in all_bins.drain() {
+        for (key, bins) in all_bins.drain() {
             let mut live_objects = 0usize;
-            for bin in bins.by_type.values_mut() {
+            for bin in bins.by_type.write().values_mut() {
                 live_objects = live_objects.saturating_add(bin.sweep(self.mark_bits));
             }
             if live_objects == 0 {
@@ -479,9 +444,34 @@ thread_local! {
     static THREAD_BINS: RefCell<OnceCell<ThreadLocalBins>> = RefCell::new(OnceCell::new());
 }
 
+#[derive(Default)]
+struct UnsafeBins(UnsafeCell<ManuallyDrop<Bins>>);
+
+impl UnsafeBins {
+    unsafe fn assume_readable(&self) -> &Bins {
+        &*self.0.get()
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    unsafe fn assume_mut(&self) -> &mut Bins {
+        &mut *self.0.get()
+    }
+}
+
+unsafe impl Send for UnsafeBins {}
+unsafe impl Sync for UnsafeBins {}
+
+impl Drop for UnsafeBins {
+    fn drop(&mut self) {
+        unsafe {
+            ManuallyDrop::drop(self.0.get_mut());
+        }
+    }
+}
+
 #[derive(Clone)]
 struct ThreadLocalBins {
-    bins: Arc<RwLock<Bins>>,
+    bins: Arc<UnsafeBins>,
     thread_id: CollectorThreadId,
     all_threads: AllThreadBins,
 }
@@ -515,7 +505,7 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
     THREAD_BINS.with_borrow(|lock| {
         lock.get_or_init(|| {
             let all_threads = GlobalCollector::get().info.all_threads.clone();
-            let bins = Arc::new(RwLock::new(Bins::default()));
+            let bins = Arc::<UnsafeBins>::default();
             let thread_id = CollectorThreadId::unique();
             CollectorCommand::NewThread(thread_id, bins.clone()).send();
             all_threads.write().insert(thread_id, Arc::downgrade(&bins));
@@ -528,8 +518,6 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
         wrapped()
     })
 }
-
-type ArcRwBinGuard = ArcRwLockReadGuard<parking_lot::RawRwLock, Bins>;
 
 struct CollectorReadGuard {
     global: &'static CollectorInfo,
@@ -595,10 +583,18 @@ impl Drop for CollectorReadGuard {
 pub struct CollectionGuard {
     collector: CollectorReadGuard,
     thread: ThreadLocalBins,
-    inner: MaybeUninit<ArcRwBinGuard>,
 }
 
 impl CollectionGuard {
+    #[allow(clippy::unused_self)]
+    fn bins_for<'a>(&'a self, bins: &'a UnsafeBins) -> &'a Bins {
+        unsafe { bins.assume_readable() }
+    }
+
+    fn bins(&self) -> &Bins {
+        self.bins_for(&self.thread.bins)
+    }
+
     /// Acquires a lock that prevents the garbage collector from running.
     ///
     /// This guard is used to provide read-only access to garbage collected
@@ -612,11 +608,7 @@ impl CollectionGuard {
     pub fn acquire() -> Self {
         let collector = CollectorReadGuard::acquire();
         let thread = ThreadLocalBins::get();
-        Self {
-            collector,
-            inner: MaybeUninit::new(thread.bins.read_arc()),
-            thread,
-        }
+        Self { collector, thread }
     }
 
     /// Manually invokes the garbage collector.
@@ -641,71 +633,22 @@ impl CollectionGuard {
     pub fn yield_to_collector(&mut self) {
         if self.collector.global.collecting.load(Ordering::Relaxed) {
             self.collector.release_reader();
-
-            // SAFETY: The guard is always present except during internal code which
-            // never invokes this function. We can assume_init_mut since we have mut
-            // reference to self. Because this function can invalidate references
-            // tied to this guard's lifetime, ownership of the guard is taken to
-            // force the compiler to invalidate any borrows.
-            let guard = unsafe { self.inner.assume_init_mut() };
-            ArcRwBinGuard::unlocked(guard, || {
-                self.collector.acquire_reader();
-            });
+            self.collector.acquire_reader();
         }
     }
 
     /// Executes `unlocked` while this guard is temporarily released.
     pub fn while_unlocked<R>(&mut self, unlocked: impl FnOnce() -> R) -> R {
         self.collector.release_reader();
-
-        // SAFETY: The guard is always present except during internal code which
-        // never invokes this function. We can assume_init_mut since we have mut
-        // reference to self. Because this function can invalidate references
-        // tied to this guard's lifetime, ownership of the guard is taken to
-        // force the compiler to invalidate any borrows.
-        let guard = unsafe { self.inner.assume_init_mut() };
-        let result = ArcRwBinGuard::unlocked(guard, unlocked);
-
+        let result = unlocked();
         self.collector.acquire_reader();
 
         result
     }
 
-    /// # Safety
-    ///
-    /// This function should only be called when the underlying guard is
-    /// guaranteed to be present. This is the default state for this type.
-    unsafe fn bins(&self) -> &Bins {
-        self.inner.assume_init_ref()
-    }
-
-    fn adopt<T: Collectable>(&mut self, value: RefCounted<T>) -> (u32, BinId) {
-        // SAFETY: The guard is always present except during allocation. Panic
-        // handling is used to ensure that after this function returns, the
-        // guard still contains a valid RwLock guard.
-        unsafe {
-            let adopt_result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                let (gen, bin, returned_guard) = Bins::adopt(value, self.inner.assume_init_read());
-                self.inner
-                    .write(returned_guard.unwrap_or_else(|| self.thread.bins.read_arc()));
-                (gen, bin)
-            }));
-            match adopt_result {
-                Ok(result) => result,
-                Err(panic) => {
-                    self.inner.write(self.thread.bins.read_arc());
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        }
-    }
-}
-
-impl Drop for CollectionGuard {
-    fn drop(&mut self) {
-        // SAFETY: The guard is always present when each internal function
-        // returns.
-        unsafe { self.inner.assume_init_drop() };
+    fn adopt<T: Collectable>(&self, value: RefCounted<T>) -> (u32, BinId) {
+        let (gen, bin) = Bins::adopt(value, self);
+        (gen, bin)
     }
 }
 
@@ -998,21 +941,15 @@ where
 
     fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard RefCounted<T>> {
         if guard.thread.thread_id == self.creating_thread {
-            self.load_slot_from(
-                &{
-                    // SAFETY: The guard is always present except during allocation which
-                    // never invokes this function.
-                    &unsafe { guard.bins() }
-                }
-                .by_type,
-                guard,
-            )
+            self.load_slot_from(&guard.bins().by_type.read(), guard)
         } else {
             let all_threads = guard.thread.all_threads.read();
             let other_thread_bins = all_threads
                 .get(&self.creating_thread)
                 .and_then(Weak::upgrade)?;
-            let result = self.load_slot_from(&other_thread_bins.read().by_type, guard);
+            let bins = guard.bins_for(&other_thread_bins);
+
+            let result = self.load_slot_from(&bins.by_type.read(), guard);
             drop(other_thread_bins);
             result
         }
@@ -1073,7 +1010,7 @@ pub struct CollectionStarting;
 
 #[derive(Default)]
 struct Bins {
-    by_type: Map<TypeId, Arc<dyn AnyBin>>,
+    by_type: RwLock<Map<TypeId, Arc<dyn AnyBin>>>,
 }
 
 impl Bins {
@@ -1085,8 +1022,8 @@ impl Bins {
     where
         T: Collectable,
     {
-        let slot = &self
-            .by_type
+        let by_type = self.by_type.read();
+        let slot = &by_type
             .get(&TypeId::of::<T>())
             .expect("areas are never deallocated")
             .as_any()
@@ -1100,28 +1037,29 @@ impl Bins {
         &*(*slot.value.get()).allocated
     }
 
-    fn adopt<T>(
-        value: RefCounted<T>,
-        bins_guard: ArcRwBinGuard,
-    ) -> (u32, BinId, Option<ArcRwBinGuard>)
+    fn adopt<T>(value: RefCounted<T>, bins_guard: &CollectionGuard) -> (u32, BinId)
     where
         T: Collectable,
     {
         let type_id = TypeId::of::<T>();
-        if let Some(bin) = bins_guard.by_type.get(&type_id) {
+        let mut by_type = bins_guard.bins().by_type.upgradable_read();
+        if let Some(bin) = by_type.get(&type_id) {
             let (gen, bin) = bin
                 .as_any()
                 .downcast_ref::<Bin<T>>()
                 .expect("type mismatch")
                 .adopt(value);
-            (gen, bin, Some(bins_guard))
+            (gen, bin)
         } else {
-            drop(bins_guard);
-            let thread_local = ThreadLocalBins::get();
-            let mut bins = thread_local.bins.write(); // TODO check for creation
-            let bin = Bin::new(value);
-            bins.by_type.insert(type_id, Arc::new(bin));
-            (0, BinId::first(), None)
+            by_type.with_upgraded(|by_type| {
+                // We don't need to check for another thread allocating, because the
+                // only thread that can allocate is the local thread. We needed a
+                // write guard, however, because other threads could be trying to
+                // load data this thread allocated.
+                let bin = Bin::new(value);
+                by_type.insert(type_id, Arc::new(bin));
+                (0, BinId::first())
+            })
         }
     }
 }
