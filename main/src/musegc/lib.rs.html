@@ -1644,25 +1644,15 @@
 <a href="#1642" id="1642">1642</a>
 <a href="#1643" id="1643">1643</a>
 <a href="#1644" id="1644">1644</a>
-<a href="#1645" id="1645">1645</a>
-<a href="#1646" id="1646">1646</a>
-<a href="#1647" id="1647">1647</a>
-<a href="#1648" id="1648">1648</a>
-<a href="#1649" id="1649">1649</a>
-<a href="#1650" id="1650">1650</a>
-<a href="#1651" id="1651">1651</a>
-<a href="#1652" id="1652">1652</a>
-<a href="#1653" id="1653">1653</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="kw">use </span>core::slice;
 <span class="kw">use </span>std::alloc::{alloc_zeroed, Layout};
 <span class="kw">use </span>std::any::{Any, TypeId};
 <span class="kw">use </span>std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 <span class="kw">use </span>std::marker::PhantomData;
-<span class="kw">use </span>std::mem::{ManuallyDrop, MaybeUninit};
+<span class="kw">use </span>std::mem::ManuallyDrop;
 <span class="kw">use </span>std::num::NonZeroUsize;
 <span class="kw">use </span>std::ops::Deref;
-<span class="kw">use </span>std::panic::AssertUnwindSafe;
 <span class="kw">use </span>std::sync::atomic::{<span class="self">self</span>, AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 <span class="kw">use </span>std::sync::{Arc, OnceLock, Weak};
 <span class="kw">use </span>std::time::{Duration, Instant};
@@ -1672,8 +1662,7 @@
 <span class="kw">use </span>flume::{Receiver, RecvError, RecvTimeoutError, Sender};
 <span class="kw">use </span>intentional::{Assert, Cast};
 <span class="kw">use </span>kempt::Map;
-<span class="kw">use </span>parking_lot::lock_api::ArcRwLockReadGuard;
-<span class="kw">use </span>parking_lot::{Condvar, Mutex, RwLock, RwLockWriteGuard};
+<span class="kw">use </span>parking_lot::{Condvar, Mutex, RwLock};
 
 <span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 </span><span class="kw">struct </span>CollectorThreadId(u64);
@@ -1686,7 +1675,7 @@
 }
 
 <span class="kw">enum </span>CollectorCommand {
-    NewThread(CollectorThreadId, Arc&lt;RwLock&lt;Bins&gt;&gt;),
+    NewThread(CollectorThreadId, Arc&lt;UnsafeBins&gt;),
     ThreadShutdown(CollectorThreadId),
     Collect(Instant),
     ScheduleCollect,
@@ -1716,11 +1705,11 @@
     }
 }
 
-<span class="kw">type </span>AllThreadBins = Arc&lt;RwLock&lt;AHashMap&lt;CollectorThreadId, Weak&lt;RwLock&lt;Bins&gt;&gt;&gt;&gt;&gt;;
+<span class="kw">type </span>AllThreadBins = Arc&lt;RwLock&lt;AHashMap&lt;CollectorThreadId, Weak&lt;UnsafeBins&gt;&gt;&gt;&gt;;
 
 <span class="kw">struct </span>ThreadBins {
     alive: bool,
-    bins: Arc&lt;RwLock&lt;Bins&gt;&gt;,
+    bins: Arc&lt;UnsafeBins&gt;,
 }
 
 <span class="kw">struct </span>CollectorInfo {
@@ -1728,8 +1717,7 @@
     collection_sync: Condvar,
     collector_sync: Condvar,
     signalled_collector: AtomicBool,
-    collecting: AtomicBool,
-    readers: AtomicUsize,
+    reader_state: ReaderState,
     all_threads: AllThreadBins,
 }
 
@@ -1916,6 +1904,7 @@
         <span class="kw">let </span><span class="kw-2">mut </span>info = <span class="self">self</span>.shared.info.lock();
         info.last_run = gc_finish;
         drop(info);
+        <span class="self">self</span>.shared.reader_state.release_write();
         <span class="self">self</span>.shared.collection_sync.notify_all();
         <span class="self">self</span>.shared
             .signalled_collector
@@ -1928,67 +1917,36 @@
         average_collection_locking: Duration,
         pause_failures: u8,
         collector: <span class="kw-2">&amp;</span>CollectorInfo,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;AHashMap&lt;CollectorThreadId, RwLockWriteGuard&lt;<span class="lifetime">'a</span>, Bins&gt;&gt;&gt; {
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;AHashMap&lt;CollectorThreadId, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Bins&gt;&gt; {
         <span class="kw">let </span>force_gc = pause_failures &gt;= <span class="number">5</span>;
         <span class="kw">let </span>lock_wait = (average_collection_locking / <span class="number">8</span>)
             .max(Duration::from_millis(<span class="number">2 </span>* u64::from(pause_failures + <span class="number">1</span>)));
         <span class="kw">let </span>long_lock_deadline = start + lock_wait * <span class="number">8</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>info_data = collector.info.lock();
-        <span class="kw">while </span>collector.readers.load(Ordering::Acquire) &gt; <span class="number">0 </span>{
-            <span class="kw">if </span>force_gc {
-                collector.collection_sync.wait(<span class="kw-2">&amp;mut </span>info_data);
-            } <span class="kw">else if </span>collector
-                .collector_sync
-                .wait_until(<span class="kw-2">&amp;mut </span>info_data, long_lock_deadline)
-                .timed_out()
-            {
-                <span class="kw">return </span><span class="prelude-val">None</span>;
+        <span class="kw">if </span>!collector.reader_state.write() {
+            <span class="kw">let </span><span class="kw-2">mut </span>info_data = collector.info.lock();
+            <span class="kw">while </span>collector.reader_state.readers() &gt; <span class="number">0 </span>{
+                <span class="kw">if </span>force_gc {
+                    collector.collector_sync.wait(<span class="kw-2">&amp;mut </span>info_data);
+                } <span class="kw">else if </span>collector
+                    .collector_sync
+                    .wait_until(<span class="kw-2">&amp;mut </span>info_data, long_lock_deadline)
+                    .timed_out()
+                {
+                    collector.reader_state.release_write();
+                    collector.collection_sync.notify_all();
+                    <span class="kw">return </span><span class="prelude-val">None</span>;
+                }
             }
         }
 
         <span class="prelude-val">Some</span>(
             thread_bins
                 .iter()
-                .map(|(thread_id, bins)| (<span class="kw-2">*</span>thread_id, bins.bins.write()))
+                .map(|(thread_id, bins)| (<span class="kw-2">*</span>thread_id, <span class="kw">unsafe </span>{ bins.bins.assume_mut() }))
                 .collect(),
         )
-        <span class="comment">// let mut bins_to_lock = thread_bins.keys().copied().collect::&lt;Vec&lt;_&gt;&gt;();
-        // while !bins_to_lock.is_empty() {
-        //     let lock_deadline = now + lock_wait;
-        //     let lock_deadline = if force_gc {
-        //         lock_deadline
-        //     } else if long_lock_deadline &lt; now {
-        //         break;
-        //     } else {
-        //         long_lock_deadline.min(lock_deadline)
-        //     };
-        //     let mut bin = bins_to_lock.len() - 1;
-        //     loop {
-        //         let thread = bins_to_lock[bin];
-
-        //         if let Some(locked) = thread_bins[&amp;thread].bins.try_write_until(lock_deadline) {
-        //             all_bins.insert(thread, locked);
-        //             bins_to_lock.remove(bin);
-        //             if bin &gt; 0 {
-        //                 bin -= 1;
-        //             } else {
-        //                 break;
-        //             }
-        //         } else {
-        //             // Timeout
-        //             break;
-        //         }
-        //     }
-        //     if !bins_to_lock.is_empty() {
-        //         now = Instant::now();
-        //         lock_wait *= 2;
-        //         rng.shuffle(&amp;mut bins_to_lock);
-        //     }
-        // }
-
-        // bins_to_lock.is_empty().then_some(all_bins)
-    </span>}
+    }
 
     <span class="kw">fn </span>collect(<span class="kw-2">&amp;mut </span><span class="self">self</span>, threads: <span class="kw-2">&amp;</span>CollectorThreadChannels) -&gt; CollectResult {
         <span class="self">self</span>.mark_bits = <span class="self">self</span>.mark_bits.wrapping_add(<span class="number">1</span>);
@@ -2016,12 +1974,13 @@
         <span class="kw">let </span>mark_one_sender = Arc::new(mark_one_sender);
 
         <span class="kw">for </span>(id, bins) <span class="kw">in </span><span class="kw-2">&amp;mut </span>all_bins {
-            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..bins.by_type.len() {
+            <span class="kw">let </span>by_type = bins.by_type.read();
+            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..by_type.len() {
                 threads
                     .tracer
                     .send(TraceRequest {
                         thread: <span class="kw-2">*</span>id,
-                        bins: bins.by_type.field(i).expect(<span class="string">"length checked"</span>).value.clone(),
+                        bins: by_type.field(i).expect(<span class="string">"length checked"</span>).value.clone(),
                         mark_bits: <span class="self">self</span>.mark_bits,
                         mark_one_sender: mark_one_sender.clone(),
                     })
@@ -2055,6 +2014,7 @@
 
             <span class="kw">let </span>bins = all_bins[<span class="kw-2">&amp;</span>thread]
                 .by_type
+                .read()
                 .get(<span class="kw-2">&amp;</span>type_id)
                 .expect(<span class="string">"areas are never deallocated"</span>)
                 .clone();
@@ -2069,21 +2029,23 @@
 
         atomic::fence(Ordering::Acquire);
         <span class="kw">let </span><span class="kw-2">mut </span>threads_to_remove = Vec::new();
-        <span class="kw">for </span>(key, <span class="kw-2">mut </span>bins) <span class="kw">in </span>all_bins.drain() {
-            <span class="kw">let </span><span class="kw-2">mut </span>live_objects = <span class="number">0usize</span>;
-            <span class="kw">for </span>bin <span class="kw">in </span>bins.by_type.values_mut() {
+        <span class="kw">for </span>(thread_id, bins) <span class="kw">in </span>all_bins {
+            <span class="kw">let </span><span class="kw-2">mut </span>live_objects = <span class="number">0_usize</span>;
+            <span class="kw">for </span>bin <span class="kw">in </span>bins.by_type.write().values_mut() {
                 live_objects = live_objects.saturating_add(bin.sweep(<span class="self">self</span>.mark_bits));
             }
             <span class="kw">if </span>live_objects == <span class="number">0 </span>{
-                threads_to_remove.push(key);
+                threads_to_remove.push(thread_id);
             }
         }
 
         <span class="kw">if </span>!threads_to_remove.is_empty() {
             <span class="kw">let </span><span class="kw-2">mut </span>all_threads = <span class="self">self</span>.shared.all_threads.write();
             <span class="kw">for </span>thread_id <span class="kw">in </span>threads_to_remove {
-                all_bins.remove(<span class="kw-2">&amp;</span>thread_id);
-                all_threads.remove(<span class="kw-2">&amp;</span>thread_id);
+                <span class="kw">if </span>!<span class="self">self</span>.thread_bins[<span class="kw-2">&amp;</span>thread_id].alive {
+                    <span class="self">self</span>.thread_bins.remove(<span class="kw-2">&amp;</span>thread_id);
+                    all_threads.remove(<span class="kw-2">&amp;</span>thread_id);
+                }
             }
         }
 
@@ -2112,8 +2074,7 @@
                 collection_sync: Condvar::new(),
                 collector_sync: Condvar::new(),
                 signalled_collector: AtomicBool::new(<span class="bool-val">false</span>),
-                collecting: AtomicBool::new(<span class="bool-val">false</span>),
-                readers: AtomicUsize::new(<span class="number">0</span>),
+                reader_state: ReaderState(AtomicUsize::new(<span class="number">0</span>)),
                 all_threads: AllThreadBins::default(),
             });
             thread::Builder::new()
@@ -2134,9 +2095,34 @@
     <span class="kw">static </span>THREAD_BINS: RefCell&lt;OnceCell&lt;ThreadLocalBins&gt;&gt; = RefCell::new(OnceCell::new());
 }
 
+<span class="attr">#[derive(Default)]
+</span><span class="kw">struct </span>UnsafeBins(UnsafeCell&lt;ManuallyDrop&lt;Bins&gt;&gt;);
+
+<span class="kw">impl </span>UnsafeBins {
+    <span class="kw">unsafe fn </span>assume_readable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
+        <span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0</span>.get()
+    }
+
+    <span class="attr">#[allow(clippy::mut_from_ref)]
+    </span><span class="kw">unsafe fn </span>assume_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Bins {
+        <span class="kw-2">&amp;mut *</span><span class="self">self</span>.<span class="number">0</span>.get()
+    }
+}
+
+<span class="kw">unsafe impl </span>Send <span class="kw">for </span>UnsafeBins {}
+<span class="kw">unsafe impl </span>Sync <span class="kw">for </span>UnsafeBins {}
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>UnsafeBins {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">unsafe </span>{
+            ManuallyDrop::drop(<span class="self">self</span>.<span class="number">0</span>.get_mut());
+        }
+    }
+}
+
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">struct </span>ThreadLocalBins {
-    bins: Arc&lt;RwLock&lt;Bins&gt;&gt;,
+    bins: Arc&lt;UnsafeBins&gt;,
     thread_id: CollectorThreadId,
     all_threads: AllThreadBins,
 }
@@ -2170,7 +2156,7 @@
     THREAD_BINS.with_borrow(|lock| {
         lock.get_or_init(|| {
             <span class="kw">let </span>all_threads = GlobalCollector::get().info.all_threads.clone();
-            <span class="kw">let </span>bins = Arc::new(RwLock::new(Bins::default()));
+            <span class="kw">let </span>bins = Arc::&lt;UnsafeBins&gt;::default();
             <span class="kw">let </span>thread_id = CollectorThreadId::unique();
             CollectorCommand::NewThread(thread_id, bins.clone()).send();
             all_threads.write().insert(thread_id, Arc::downgrade(<span class="kw-2">&amp;</span>bins));
@@ -2184,7 +2170,54 @@
     })
 }
 
-<span class="kw">type </span>ArcRwBinGuard = ArcRwLockReadGuard&lt;parking_lot::RawRwLock, Bins&gt;;
+<span class="kw">struct </span>ReaderState(AtomicUsize);
+
+<span class="kw">impl </span>ReaderState {
+    <span class="kw">const </span>COLLECTING_BIT: usize = <span class="number">1 </span>&lt;&lt; (usize::BITS - <span class="number">1</span>);
+
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0
+            </span>.fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                (state &amp; <span class="self">Self</span>::COLLECTING_BIT == <span class="number">0</span>).then_some(state + <span class="number">1</span>)
+            })
+            .is_ok()
+    }
+
+    <span class="kw">fn </span>release_read(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.fetch_sub(<span class="number">1</span>, Ordering::Acquire);
+    }
+
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">let </span><span class="kw-2">mut </span>current_readers = <span class="number">0</span>;
+        <span class="self">self</span>.<span class="number">0
+            </span>.fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                current_readers = state;
+                <span class="prelude-val">Some</span>(state | <span class="self">Self</span>::COLLECTING_BIT)
+            })
+            .expect(<span class="string">"error updating reader_state"</span>);
+        current_readers == <span class="number">0
+    </span>}
+
+    <span class="kw">fn </span>release_write(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0
+            </span>.fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                <span class="prelude-val">Some</span>(state &amp; !<span class="self">Self</span>::COLLECTING_BIT)
+            })
+            .expect(<span class="string">"error updating reader_state"</span>);
+    }
+
+    <span class="kw">fn </span>readers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0</span>.load(Ordering::Acquire) &amp; !<span class="self">Self</span>::COLLECTING_BIT
+    }
+
+    <span class="kw">fn </span>release_read_if_collecting(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0
+            </span>.fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                (state &amp; <span class="self">Self</span>::COLLECTING_BIT != <span class="number">0</span>).then_some(state - <span class="number">1</span>)
+            })
+            .is_ok()
+    }
+}
 
 <span class="kw">struct </span>CollectorReadGuard {
     global: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>CollectorInfo,
@@ -2200,26 +2233,26 @@
     }
 
     <span class="kw">fn </span>acquire_reader(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">loop </span>{
-            <span class="kw">if </span><span class="self">self</span>.global.collecting.load(Ordering::Acquire) {
-                <span class="kw">let </span><span class="kw-2">mut </span>info_data = <span class="self">self</span>.global.info.lock();
-                <span class="kw">while </span><span class="self">self</span>.global.collecting.load(Ordering::Acquire) {
-                    <span class="self">self</span>.global.collection_sync.wait(<span class="kw-2">&amp;mut </span>info_data);
-                }
-            }
-
-            <span class="self">self</span>.global.readers.fetch_add(<span class="number">1</span>, Ordering::Acquire);
-            <span class="kw">if </span><span class="self">self</span>.global.collecting.load(Ordering::Acquire) {
-                <span class="self">self</span>.release_reader();
-            } <span class="kw">else </span>{
-                <span class="kw">break</span>;
+        <span class="kw">if </span>!<span class="self">self</span>.global.reader_state.read() {
+            <span class="kw">let </span><span class="kw-2">mut </span>info_data = <span class="self">self</span>.global.info.lock();
+            <span class="kw">while </span>!<span class="self">self</span>.global.reader_state.read() {
+                <span class="self">self</span>.global.collection_sync.wait(<span class="kw-2">&amp;mut </span>info_data);
             }
         }
     }
 
     <span class="kw">fn </span>release_reader(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="self">self</span>.global.readers.fetch_sub(<span class="number">1</span>, Ordering::Acquire);
+        <span class="self">self</span>.global.reader_state.release_read();
         <span class="self">self</span>.global.collector_sync.notify_one();
+    }
+
+    <span class="kw">fn </span>release_reader_if_collecting(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">if </span><span class="self">self</span>.global.reader_state.release_read_if_collecting() {
+            <span class="self">self</span>.global.collector_sync.notify_one();
+            <span class="bool-val">true
+        </span>} <span class="kw">else </span>{
+            <span class="bool-val">false
+        </span>}
     }
 }
 
@@ -2250,10 +2283,18 @@
 </span><span class="kw">pub struct </span>CollectionGuard {
     collector: CollectorReadGuard,
     thread: ThreadLocalBins,
-    inner: MaybeUninit&lt;ArcRwBinGuard&gt;,
 }
 
 <span class="kw">impl </span>CollectionGuard {
+    <span class="attr">#[allow(clippy::unused_self)]
+    </span><span class="kw">fn </span>bins_for&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bins: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>UnsafeBins) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Bins {
+        <span class="kw">unsafe </span>{ bins.assume_readable() }
+    }
+
+    <span class="kw">fn </span>bins(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
+        <span class="self">self</span>.bins_for(<span class="kw-2">&amp;</span><span class="self">self</span>.thread.bins)
+    }
+
     <span class="doccomment">/// Acquires a lock that prevents the garbage collector from running.
     ///
     /// This guard is used to provide read-only access to garbage collected
@@ -2267,11 +2308,7 @@
     </span><span class="kw">pub fn </span>acquire() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>collector = CollectorReadGuard::acquire();
         <span class="kw">let </span>thread = ThreadLocalBins::get();
-        <span class="self">Self </span>{
-            collector,
-            inner: MaybeUninit::new(thread.bins.read_arc()),
-            thread,
-        }
+        <span class="self">Self </span>{ collector, thread }
     }
 
     <span class="doccomment">/// Manually invokes the garbage collector.
@@ -2294,73 +2331,23 @@
     /// function to invoke. To minimize collection pauses, long-held guards
     /// should call this function regularly.
     </span><span class="kw">pub fn </span>yield_to_collector(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if </span><span class="self">self</span>.collector.global.collecting.load(Ordering::Relaxed) {
-            <span class="self">self</span>.collector.release_reader();
-
-            <span class="comment">// SAFETY: The guard is always present except during internal code which
-            // never invokes this function. We can assume_init_mut since we have mut
-            // reference to self. Because this function can invalidate references
-            // tied to this guard's lifetime, ownership of the guard is taken to
-            // force the compiler to invalidate any borrows.
-            </span><span class="kw">let </span>guard = <span class="kw">unsafe </span>{ <span class="self">self</span>.inner.assume_init_mut() };
-            ArcRwBinGuard::unlocked(guard, || {
-                <span class="self">self</span>.collector.acquire_reader();
-            });
+        <span class="kw">if </span><span class="self">self</span>.collector.release_reader_if_collecting() {
+            <span class="self">self</span>.collector.acquire_reader();
         }
     }
 
     <span class="doccomment">/// Executes `unlocked` while this guard is temporarily released.
     </span><span class="kw">pub fn </span>while_unlocked&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, unlocked: <span class="kw">impl </span>FnOnce() -&gt; R) -&gt; R {
         <span class="self">self</span>.collector.release_reader();
-
-        <span class="comment">// SAFETY: The guard is always present except during internal code which
-        // never invokes this function. We can assume_init_mut since we have mut
-        // reference to self. Because this function can invalidate references
-        // tied to this guard's lifetime, ownership of the guard is taken to
-        // force the compiler to invalidate any borrows.
-        </span><span class="kw">let </span>guard = <span class="kw">unsafe </span>{ <span class="self">self</span>.inner.assume_init_mut() };
-        <span class="kw">let </span>result = ArcRwBinGuard::unlocked(guard, unlocked);
-
+        <span class="kw">let </span>result = unlocked();
         <span class="self">self</span>.collector.acquire_reader();
 
         result
     }
 
-    <span class="doccomment">/// # Safety
-    ///
-    /// This function should only be called when the underlying guard is
-    /// guaranteed to be present. This is the default state for this type.
-    </span><span class="kw">unsafe fn </span>bins(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
-        <span class="self">self</span>.inner.assume_init_ref()
-    }
-
-    <span class="kw">fn </span>adopt&lt;T: Collectable&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: RefCounted&lt;T&gt;) -&gt; (u32, BinId) {
-        <span class="comment">// SAFETY: The guard is always present except during allocation. Panic
-        // handling is used to ensure that after this function returns, the
-        // guard still contains a valid RwLock guard.
-        </span><span class="kw">unsafe </span>{
-            <span class="kw">let </span>adopt_result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                <span class="kw">let </span>(gen, bin, returned_guard) = Bins::adopt(value, <span class="self">self</span>.inner.assume_init_read());
-                <span class="self">self</span>.inner
-                    .write(returned_guard.unwrap_or_else(|| <span class="self">self</span>.thread.bins.read_arc()));
-                (gen, bin)
-            }));
-            <span class="kw">match </span>adopt_result {
-                <span class="prelude-val">Ok</span>(result) =&gt; result,
-                <span class="prelude-val">Err</span>(panic) =&gt; {
-                    <span class="self">self</span>.inner.write(<span class="self">self</span>.thread.bins.read_arc());
-                    std::panic::resume_unwind(panic)
-                }
-            }
-        }
-    }
-}
-
-<span class="kw">impl </span>Drop <span class="kw">for </span>CollectionGuard {
-    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="comment">// SAFETY: The guard is always present when each internal function
-        // returns.
-        </span><span class="kw">unsafe </span>{ <span class="self">self</span>.inner.assume_init_drop() };
+    <span class="kw">fn </span>adopt&lt;T: Collectable&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, value: RefCounted&lt;T&gt;) -&gt; (u32, BinId) {
+        <span class="kw">let </span>(gen, bin) = Bins::adopt(value, <span class="self">self</span>);
+        (gen, bin)
     }
 }
 
@@ -2653,21 +2640,15 @@
 
     <span class="kw">fn </span>load_slot&lt;<span class="lifetime">'guard</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>RefCounted&lt;T&gt;&gt; {
         <span class="kw">if </span>guard.thread.thread_id == <span class="self">self</span>.creating_thread {
-            <span class="self">self</span>.load_slot_from(
-                <span class="kw-2">&amp;</span>{
-                    <span class="comment">// SAFETY: The guard is always present except during allocation which
-                    // never invokes this function.
-                    </span><span class="kw-2">&amp;</span><span class="kw">unsafe </span>{ guard.bins() }
-                }
-                .by_type,
-                guard,
-            )
+            <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>guard.bins().by_type.read(), guard)
         } <span class="kw">else </span>{
             <span class="kw">let </span>all_threads = guard.thread.all_threads.read();
             <span class="kw">let </span>other_thread_bins = all_threads
                 .get(<span class="kw-2">&amp;</span><span class="self">self</span>.creating_thread)
                 .and_then(Weak::upgrade)<span class="question-mark">?</span>;
-            <span class="kw">let </span>result = <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>other_thread_bins.read().by_type, guard);
+            <span class="kw">let </span>bins = guard.bins_for(<span class="kw-2">&amp;</span>other_thread_bins);
+
+            <span class="kw">let </span>result = <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>bins.by_type.read(), guard);
             drop(other_thread_bins);
             result
         }
@@ -2728,7 +2709,7 @@
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>Bins {
-    by_type: Map&lt;TypeId, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;,
+    by_type: RwLock&lt;Map&lt;TypeId, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;&gt;,
 }
 
 <span class="kw">impl </span>Bins {
@@ -2740,8 +2721,8 @@
     <span class="kw">where
         </span>T: Collectable,
     {
-        <span class="kw">let </span>slot = <span class="kw-2">&amp;</span><span class="self">self
-            </span>.by_type
+        <span class="kw">let </span>by_type = <span class="self">self</span>.by_type.read();
+        <span class="kw">let </span>slot = <span class="kw-2">&amp;</span>by_type
             .get(<span class="kw-2">&amp;</span>TypeId::of::&lt;T&gt;())
             .expect(<span class="string">"areas are never deallocated"</span>)
             .as_any()
@@ -2755,28 +2736,29 @@
         </span><span class="kw-2">&amp;*</span>(<span class="kw-2">*</span>slot.value.get()).allocated
     }
 
-    <span class="kw">fn </span>adopt&lt;T&gt;(
-        value: RefCounted&lt;T&gt;,
-        bins_guard: ArcRwBinGuard,
-    ) -&gt; (u32, BinId, <span class="prelude-ty">Option</span>&lt;ArcRwBinGuard&gt;)
+    <span class="kw">fn </span>adopt&lt;T&gt;(value: RefCounted&lt;T&gt;, bins_guard: <span class="kw-2">&amp;</span>CollectionGuard) -&gt; (u32, BinId)
     <span class="kw">where
         </span>T: Collectable,
     {
         <span class="kw">let </span>type_id = TypeId::of::&lt;T&gt;();
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(bin) = bins_guard.by_type.get(<span class="kw-2">&amp;</span>type_id) {
+        <span class="kw">let </span><span class="kw-2">mut </span>by_type = bins_guard.bins().by_type.upgradable_read();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(bin) = by_type.get(<span class="kw-2">&amp;</span>type_id) {
             <span class="kw">let </span>(gen, bin) = bin
                 .as_any()
                 .downcast_ref::&lt;Bin&lt;T&gt;&gt;()
                 .expect(<span class="string">"type mismatch"</span>)
                 .adopt(value);
-            (gen, bin, <span class="prelude-val">Some</span>(bins_guard))
+            (gen, bin)
         } <span class="kw">else </span>{
-            drop(bins_guard);
-            <span class="kw">let </span>thread_local = ThreadLocalBins::get();
-            <span class="kw">let </span><span class="kw-2">mut </span>bins = thread_local.bins.write(); <span class="comment">// TODO check for creation
-            </span><span class="kw">let </span>bin = Bin::new(value);
-            bins.by_type.insert(type_id, Arc::new(bin));
-            (<span class="number">0</span>, BinId::first(), <span class="prelude-val">None</span>)
+            by_type.with_upgraded(|by_type| {
+                <span class="comment">// We don't need to check for another thread allocating, because the
+                // only thread that can allocate is the local thread. We needed a
+                // write guard, however, because other threads could be trying to
+                // load data this thread allocated.
+                </span><span class="kw">let </span>bin = Bin::new(value);
+                by_type.insert(type_id, Arc::new(bin));
+                (<span class="number">0</span>, BinId::first())
+            })
         }
     }
 }

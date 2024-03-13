@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="musegc"><title>musegc - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="musegc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a165f1f65 2024-03-12)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../static.files/storage-4c98445ec4002617.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../musegc/index.html">musegc</a><span class="version">0.1.0</span></h2></div><div class="sidebar-elems"><ul class="block">
             <li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#functions">Functions</a></li></ul></section></div></nav><div class="sidebar-resizer"></div>
-    <main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../musegc/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">musegc</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="src" href="../src/musegc/lib.rs.html#1-1653">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="musegc"><a class="doc-anchor" href="#musegc">§</a>musegc</h2>
+    <main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../musegc/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">musegc</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="src" href="../src/musegc/lib.rs.html#1-1644">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="musegc"><a class="doc-anchor" href="#musegc">§</a>musegc</h2>
 <blockquote>
 <p>This name is a placeholder. The design of this crate has nothing to do with
 <a href="https://github.com/khonsulabs/muse">Muse</a>, so naming it <code>muse-gc</code> seems misleading.</p>
@@ -107,29 +107,29 @@ comparing the time it takes to allocate each <code>Arc&lt;[u8; 32]&gt;</code>, <
 and <code>Ref&lt;[u8; 32]&gt;</code>. The measurements are the amount of time it takes for an
 individual allocation. These results are from running on a Ryzen 3700X.</p>
 <h4 id="1-thread"><a class="doc-anchor" href="#1-thread">§</a>1 thread</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
-<tr><td>Arc</td><td>45.70ns</td><td>20.00ns</td><td>49.93us</td><td>211.8ns</td><td>0.010%</td></tr>
-<tr><td>Strong</td><td>68.12ns</td><td>40.00ns</td><td>10.02us</td><td>132.2ns</td><td>0.014%</td></tr>
-<tr><td>Weak</td><td>82.60ns</td><td>40.00ns</td><td>90.35us</td><td>523.9ns</td><td>0.007%</td></tr>
+<tr><td>Arc</td><td>44.67ns</td><td>20.00ns</td><td>10.69us</td><td>146.2ns</td><td>0.010%</td></tr>
+<tr><td>Ref</td><td>76.03ns</td><td>40.00ns</td><td>69.52us</td><td>451.8ns</td><td>0.008%</td></tr>
+<tr><td>Root</td><td>70.68ns</td><td>50.00ns</td><td>8.960us</td><td>120.7ns</td><td>0.014%</td></tr>
 </tbody></table>
 </div><h4 id="4-threads"><a class="doc-anchor" href="#4-threads">§</a>4 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
-<tr><td>Arc</td><td>49.62ns</td><td>20.00ns</td><td>22.64us</td><td>157.4ns</td><td>0.010%</td></tr>
-<tr><td>Strong</td><td>75.47ns</td><td>40.00ns</td><td>68.09us</td><td>278.4ns</td><td>0.013%</td></tr>
-<tr><td>Weak</td><td>86.33ns</td><td>40.00ns</td><td>119.0us</td><td>607.3ns</td><td>0.006%</td></tr>
+<tr><td>Arc</td><td>47.20ns</td><td>20.00ns</td><td>11.41us</td><td>143.3ns</td><td>0.010%</td></tr>
+<tr><td>Ref</td><td>80.90ns</td><td>40.00ns</td><td>147.0us</td><td>555.3ns</td><td>0.006%</td></tr>
+<tr><td>Root</td><td>96.05ns</td><td>50.00ns</td><td>51.37us</td><td>238.9ns</td><td>0.014%</td></tr>
 </tbody></table>
 </div><h4 id="8-threads"><a class="doc-anchor" href="#8-threads">§</a>8 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
-<tr><td>Arc</td><td>51.76ns</td><td>20.00ns</td><td>52.44us</td><td>166.4ns</td><td>0.010%</td></tr>
-<tr><td>Strong</td><td>122.4ns</td><td>40.00ns</td><td>123.4us</td><td>674.9ns</td><td>0.008%</td></tr>
-<tr><td>Weak</td><td>84.70ns</td><td>40.00ns</td><td>72.24us</td><td>452.2ns</td><td>0.005%</td></tr>
+<tr><td>Arc</td><td>52.36ns</td><td>20.00ns</td><td>34.82us</td><td>161.7ns</td><td>0.010%</td></tr>
+<tr><td>Ref</td><td>80.47ns</td><td>40.00ns</td><td>341.0us</td><td>592.3ns</td><td>0.004%</td></tr>
+<tr><td>Root</td><td>126.7ns</td><td>50.00ns</td><td>255.0us</td><td>872.8ns</td><td>0.006%</td></tr>
 </tbody></table>
 </div><h4 id="16-threads"><a class="doc-anchor" href="#16-threads">§</a>16 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
-<tr><td>Arc</td><td>58.69ns</td><td>20.00ns</td><td>185.3us</td><td>428.1ns</td><td>0.010%</td></tr>
-<tr><td>Strong</td><td>142.0ns</td><td>40.00ns</td><td>2.144ms</td><td>1.913us</td><td>0.005%</td></tr>
-<tr><td>Weak</td><td>124.6ns</td><td>40.00ns</td><td>349.8us</td><td>997.9ns</td><td>0.006%</td></tr>
+<tr><td>Arc</td><td>59.40ns</td><td>20.00ns</td><td>123.3us</td><td>370.1ns</td><td>0.010%</td></tr>
+<tr><td>Ref</td><td>120.3ns</td><td>40.00ns</td><td>665.6us</td><td>1.120us</td><td>0.006%</td></tr>
+<tr><td>Root</td><td>145.7ns</td><td>50.00ns</td><td>215.6us</td><td>1.050us</td><td>0.006%</td></tr>
 </tbody></table>
 </div><h4 id="32-threads"><a class="doc-anchor" href="#32-threads">§</a>32 threads</h4><div><table><thead><tr><th>Label</th><th>avg</th><th>min</th><th>max</th><th>stddev</th><th>out%</th></tr></thead><tbody>
-<tr><td>Arc</td><td>71.32ns</td><td>20.00ns</td><td>550.7us</td><td>1.158us</td><td>0.001%</td></tr>
-<tr><td>Strong</td><td>164.1ns</td><td>40.00ns</td><td>3.017ms</td><td>2.600us</td><td>0.004%</td></tr>
-<tr><td>Weak</td><td>140.7ns</td><td>40.00ns</td><td>1.766ms</td><td>2.005us</td><td>0.005%</td></tr>
+<tr><td>Arc</td><td>69.20ns</td><td>20.00ns</td><td>338.8us</td><td>941.7ns</td><td>0.001%</td></tr>
+<tr><td>Ref</td><td>138.6ns</td><td>40.00ns</td><td>471.0us</td><td>1.657us</td><td>0.006%</td></tr>
+<tr><td>Root</td><td>165.8ns</td><td>50.00ns</td><td>1.140ms</td><td>2.124us</td><td>0.005%</td></tr>
 </tbody></table>
 </div><h4 id="authors-benchmark-summary"><a class="doc-anchor" href="#authors-benchmark-summary">§</a>Author’s Benchmark Summary</h4>
 <p>In these benchmarks, 100 allocations are collected into a pre-allocated <code>Vec</code>.
