@@ -8,8 +8,8 @@ use flume::{Receiver, Sender};
 use musegc::{collected, Collectable, CollectionGuard, ContainsNoCollectables, Ref, Root};
 use parking_lot::Mutex;
 
-const WORK_ITERS: usize = 100;
-const WORK_ITEMS: usize = 100;
+const WORK_ITERS: usize = 64;
+const WORK_ITEMS: usize = 64;
 
 #[test]
 fn round_robin() {

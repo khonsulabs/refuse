@@ -71,8 +71,7 @@ struct CollectorInfo {
     collection_sync: Condvar,
     collector_sync: Condvar,
     signalled_collector: AtomicBool,
-    collecting: AtomicBool,
-    readers: AtomicUsize,
+    reader_state: ReaderState,
     all_threads: AllThreadBins,
 }
 
@@ -259,6 +258,7 @@ impl Collector {
         let mut info = self.shared.info.lock();
         info.last_run = gc_finish;
         drop(info);
+        self.shared.reader_state.release_write();
         self.shared.collection_sync.notify_all();
         self.shared
             .signalled_collector
@@ -277,16 +277,20 @@ impl Collector {
             .max(Duration::from_millis(2 * u64::from(pause_failures + 1)));
         let long_lock_deadline = start + lock_wait * 8;
 
-        let mut info_data = collector.info.lock();
-        while collector.readers.load(Ordering::Acquire) > 0 {
-            if force_gc {
-                collector.collection_sync.wait(&mut info_data);
-            } else if collector
-                .collector_sync
-                .wait_until(&mut info_data, long_lock_deadline)
-                .timed_out()
-            {
-                return None;
+        if !collector.reader_state.write() {
+            let mut info_data = collector.info.lock();
+            while collector.reader_state.readers() > 0 {
+                if force_gc {
+                    collector.collector_sync.wait(&mut info_data);
+                } else if collector
+                    .collector_sync
+                    .wait_until(&mut info_data, long_lock_deadline)
+                    .timed_out()
+                {
+                    collector.reader_state.release_write();
+                    collector.collection_sync.notify_all();
+                    return None;
+                }
             }
         }
 
@@ -379,21 +383,23 @@ impl Collector {
 
         atomic::fence(Ordering::Acquire);
         let mut threads_to_remove = Vec::new();
-        for (key, bins) in all_bins.drain() {
-            let mut live_objects = 0usize;
+        for (thread_id, bins) in all_bins {
+            let mut live_objects = 0_usize;
             for bin in bins.by_type.write().values_mut() {
                 live_objects = live_objects.saturating_add(bin.sweep(self.mark_bits));
             }
             if live_objects == 0 {
-                threads_to_remove.push(key);
+                threads_to_remove.push(thread_id);
             }
         }
 
         if !threads_to_remove.is_empty() {
             let mut all_threads = self.shared.all_threads.write();
             for thread_id in threads_to_remove {
-                all_bins.remove(&thread_id);
-                all_threads.remove(&thread_id);
+                if !self.thread_bins[&thread_id].alive {
+                    self.thread_bins.remove(&thread_id);
+                    all_threads.remove(&thread_id);
+                }
             }
         }
 
@@ -422,8 +428,7 @@ impl GlobalCollector {
                 collection_sync: Condvar::new(),
                 collector_sync: Condvar::new(),
                 signalled_collector: AtomicBool::new(false),
-                collecting: AtomicBool::new(false),
-                readers: AtomicUsize::new(0),
+                reader_state: ReaderState(AtomicUsize::new(0)),
                 all_threads: AllThreadBins::default(),
             });
             thread::Builder::new()
@@ -519,6 +524,55 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
     })
 }
 
+struct ReaderState(AtomicUsize);
+
+impl ReaderState {
+    const COLLECTING_BIT: usize = 1 << (usize::BITS - 1);
+
+    fn read(&self) -> bool {
+        self.0
+            .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                (state & Self::COLLECTING_BIT == 0).then_some(state + 1)
+            })
+            .is_ok()
+    }
+
+    fn release_read(&self) {
+        self.0.fetch_sub(1, Ordering::Acquire);
+    }
+
+    fn write(&self) -> bool {
+        let mut current_readers = 0;
+        self.0
+            .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                current_readers = state;
+                Some(state | Self::COLLECTING_BIT)
+            })
+            .expect("error updating reader_state");
+        current_readers == 0
+    }
+
+    fn release_write(&self) {
+        self.0
+            .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                Some(state & !Self::COLLECTING_BIT)
+            })
+            .expect("error updating reader_state");
+    }
+
+    fn readers(&self) -> usize {
+        self.0.load(Ordering::Acquire) & !Self::COLLECTING_BIT
+    }
+
+    fn release_read_if_collecting(&self) -> bool {
+        self.0
+            .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
+                (state & Self::COLLECTING_BIT != 0).then_some(state - 1)
+            })
+            .is_ok()
+    }
+}
+
 struct CollectorReadGuard {
     global: &'static CollectorInfo,
 }
@@ -533,26 +587,26 @@ impl CollectorReadGuard {
     }
 
     fn acquire_reader(&mut self) {
-        loop {
-            if self.global.collecting.load(Ordering::Acquire) {
-                let mut info_data = self.global.info.lock();
-                while self.global.collecting.load(Ordering::Acquire) {
-                    self.global.collection_sync.wait(&mut info_data);
-                }
-            }
-
-            self.global.readers.fetch_add(1, Ordering::Acquire);
-            if self.global.collecting.load(Ordering::Acquire) {
-                self.release_reader();
-            } else {
-                break;
+        if !self.global.reader_state.read() {
+            let mut info_data = self.global.info.lock();
+            while !self.global.reader_state.read() {
+                self.global.collection_sync.wait(&mut info_data);
             }
         }
     }
 
     fn release_reader(&mut self) {
-        self.global.readers.fetch_sub(1, Ordering::Acquire);
+        self.global.reader_state.release_read();
         self.global.collector_sync.notify_one();
+    }
+
+    fn release_reader_if_collecting(&mut self) -> bool {
+        if self.global.reader_state.release_read_if_collecting() {
+            self.global.collector_sync.notify_one();
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -631,8 +685,7 @@ impl CollectionGuard {
     /// function to invoke. To minimize collection pauses, long-held guards
     /// should call this function regularly.
     pub fn yield_to_collector(&mut self) {
-        if self.collector.global.collecting.load(Ordering::Relaxed) {
-            self.collector.release_reader();
+        if self.collector.release_reader_if_collecting() {
             self.collector.acquire_reader();
         }
     }
