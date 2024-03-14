@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="musegc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a165f1f65 2024-03-12)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="musegc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (3cbb93223 2024-03-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../musegc/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -1644,6 +1644,23 @@
 <a href="#1642" id="1642">1642</a>
 <a href="#1643" id="1643">1643</a>
 <a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
+<a href="#1647" id="1647">1647</a>
+<a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
+<a href="#1659" id="1659">1659</a>
+<a href="#1660" id="1660">1660</a>
+<a href="#1661" id="1661">1661</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 </span><span class="kw">use </span>core::slice;
 <span class="kw">use </span>std::alloc::{alloc_zeroed, Layout};
@@ -1659,6 +1676,7 @@
 <span class="kw">use </span>std::{array, thread};
 
 <span class="kw">use </span>ahash::AHashMap;
+<span class="kw">use </span>crossbeam_utils::sync::{Parker, Unparker};
 <span class="kw">use </span>flume::{Receiver, RecvError, RecvTimeoutError, Sender};
 <span class="kw">use </span>intentional::{Assert, Cast};
 <span class="kw">use </span>kempt::Map;
@@ -1715,7 +1733,7 @@
 <span class="kw">struct </span>CollectorInfo {
     info: Mutex&lt;CollectorInfoData&gt;,
     collection_sync: Condvar,
-    collector_sync: Condvar,
+    collector_unparker: Unparker,
     signalled_collector: AtomicBool,
     reader_state: ReaderState,
     all_threads: AllThreadBins,
@@ -1799,7 +1817,7 @@
         }
     }
 
-    <span class="kw">fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
+    <span class="kw">fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>, parker: <span class="kw-2">&amp;</span>Parker) {
         thread::scope(|scope| {
             <span class="kw">let </span>(tracer, trace_receiver) = flume::bounded(<span class="number">128</span>);
 
@@ -1829,7 +1847,7 @@
                 <span class="kw">let </span>command = <span class="kw">match </span><span class="self">self</span>.next_command() {
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(command)) =&gt; command,
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
-                        <span class="self">self</span>.collect_and_notify(<span class="kw-2">&amp;</span>channels);
+                        <span class="self">self</span>.collect_and_notify(<span class="kw-2">&amp;</span>channels, parker);
                         <span class="kw">continue</span>;
                     }
                     <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">break</span>,
@@ -1857,7 +1875,7 @@
                         <span class="kw">let </span>info = <span class="self">self</span>.shared.info.lock();
                         <span class="kw">if </span>info.last_run &lt; requested_at {
                             drop(info);
-                            <span class="self">self</span>.collect_and_notify(<span class="kw-2">&amp;</span>channels);
+                            <span class="self">self</span>.collect_and_notify(<span class="kw-2">&amp;</span>channels, parker);
                         }
                     }
                     CollectorCommand::ScheduleCollect =&gt; {
@@ -1873,10 +1891,10 @@
         });
     }
 
-    <span class="kw">fn </span>collect_and_notify(<span class="kw-2">&amp;mut </span><span class="self">self</span>, channels: <span class="kw-2">&amp;</span>CollectorThreadChannels) {
+    <span class="kw">fn </span>collect_and_notify(<span class="kw-2">&amp;mut </span><span class="self">self</span>, channels: <span class="kw-2">&amp;</span>CollectorThreadChannels, parker: <span class="kw-2">&amp;</span>Parker) {
         <span class="self">self</span>.next_gc = <span class="prelude-val">None</span>;
         <span class="kw">let </span>gc_start = Instant::now();
-        <span class="kw">let </span>collect_result = <span class="self">self</span>.collect(channels);
+        <span class="kw">let </span>collect_result = <span class="self">self</span>.collect(channels, parker);
         <span class="kw">let </span>gc_finish = Instant::now();
 
         <span class="kw">let </span>gc_pause = <span class="kw">match </span>collect_result {
@@ -1917,6 +1935,7 @@
         average_collection_locking: Duration,
         pause_failures: u8,
         collector: <span class="kw-2">&amp;</span>CollectorInfo,
+        parker: <span class="kw-2">&amp;</span>Parker,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;AHashMap&lt;CollectorThreadId, <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>Bins&gt;&gt; {
         <span class="kw">let </span>force_gc = pause_failures &gt;= <span class="number">5</span>;
         <span class="kw">let </span>lock_wait = (average_collection_locking / <span class="number">8</span>)
@@ -1924,18 +1943,16 @@
         <span class="kw">let </span>long_lock_deadline = start + lock_wait * <span class="number">8</span>;
 
         <span class="kw">if </span>!collector.reader_state.write() {
-            <span class="kw">let </span><span class="kw-2">mut </span>info_data = collector.info.lock();
             <span class="kw">while </span>collector.reader_state.readers() &gt; <span class="number">0 </span>{
                 <span class="kw">if </span>force_gc {
-                    collector.collector_sync.wait(<span class="kw-2">&amp;mut </span>info_data);
-                } <span class="kw">else if </span>collector
-                    .collector_sync
-                    .wait_until(<span class="kw-2">&amp;mut </span>info_data, long_lock_deadline)
-                    .timed_out()
-                {
-                    collector.reader_state.release_write();
-                    collector.collection_sync.notify_all();
-                    <span class="kw">return </span><span class="prelude-val">None</span>;
+                    parker.park();
+                } <span class="kw">else </span>{
+                    parker.park_deadline(long_lock_deadline);
+                    <span class="kw">if </span>Instant::now() &gt; long_lock_deadline &amp;&amp; collector.reader_state.readers() &gt; <span class="number">0 </span>{
+                        collector.reader_state.release_write();
+                        collector.collection_sync.notify_all();
+                        <span class="kw">return </span><span class="prelude-val">None</span>;
+                    }
                 }
             }
         }
@@ -1948,7 +1965,7 @@
         )
     }
 
-    <span class="kw">fn </span>collect(<span class="kw-2">&amp;mut </span><span class="self">self</span>, threads: <span class="kw-2">&amp;</span>CollectorThreadChannels) -&gt; CollectResult {
+    <span class="kw">fn </span>collect(<span class="kw-2">&amp;mut </span><span class="self">self</span>, threads: <span class="kw-2">&amp;</span>CollectorThreadChannels, parker: <span class="kw-2">&amp;</span>Parker) -&gt; CollectResult {
         <span class="self">self</span>.mark_bits = <span class="self">self</span>.mark_bits.wrapping_add(<span class="number">1</span>);
         <span class="kw">if </span><span class="self">self</span>.mark_bits == <span class="number">0 </span>{
             <span class="self">self</span>.mark_bits = <span class="number">1</span>;
@@ -1961,6 +1978,7 @@
             <span class="self">self</span>.average_collection_locking,
             <span class="self">self</span>.pause_failures,
             <span class="kw-2">&amp;</span><span class="self">self</span>.shared,
+            parker,
         ) <span class="kw">else </span>{
             <span class="self">self</span>.pause_failures += <span class="number">1</span>;
             <span class="kw">return </span>CollectResult::CouldntRun;
@@ -2067,12 +2085,13 @@
     <span class="kw">fn </span>get() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>GlobalCollector {
         COLLECTOR.get_or_init(|| {
             <span class="kw">let </span>(sender, receiver) = flume::bounded(<span class="number">1024</span>);
+            <span class="kw">let </span>parker = Parker::new();
             <span class="kw">let </span>info = Arc::new(CollectorInfo {
                 info: Mutex::new(CollectorInfoData {
                     last_run: Instant::now(),
                 }),
                 collection_sync: Condvar::new(),
-                collector_sync: Condvar::new(),
+                collector_unparker: parker.unparker().clone(),
                 signalled_collector: AtomicBool::new(<span class="bool-val">false</span>),
                 reader_state: ReaderState(AtomicUsize::new(<span class="number">0</span>)),
                 all_threads: AllThreadBins::default(),
@@ -2081,7 +2100,7 @@
                 .name(String::from(<span class="string">"collector"</span>))
                 .spawn({
                     <span class="kw">let </span>info = info.clone();
-                    <span class="kw">move </span>|| Collector::new(receiver, info).run()
+                    <span class="kw">move </span>|| Collector::new(receiver, info).run(<span class="kw-2">&amp;</span>parker)
                 })
                 .expect(<span class="string">"error starting collector thread"</span>);
             GlobalCollector { sender, info }
@@ -2183,8 +2202,8 @@
             .is_ok()
     }
 
-    <span class="kw">fn </span>release_read(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="self">self</span>.<span class="number">0</span>.fetch_sub(<span class="number">1</span>, Ordering::Acquire);
+    <span class="kw">fn </span>release_read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0</span>.fetch_sub(<span class="number">1</span>, Ordering::Acquire) == (<span class="self">Self</span>::COLLECTING_BIT | <span class="number">1</span>)
     }
 
     <span class="kw">fn </span>write(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -2210,13 +2229,25 @@
         <span class="self">self</span>.<span class="number">0</span>.load(Ordering::Acquire) &amp; !<span class="self">Self</span>::COLLECTING_BIT
     }
 
-    <span class="kw">fn </span>release_read_if_collecting(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
-        <span class="self">self</span>.<span class="number">0
+    <span class="kw">fn </span>release_read_if_collecting(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ReleaseReadResult {
+        <span class="kw">match </span><span class="self">self
+            </span>.<span class="number">0
             </span>.fetch_update(Ordering::Release, Ordering::Acquire, |state| {
                 (state &amp; <span class="self">Self</span>::COLLECTING_BIT != <span class="number">0</span>).then_some(state - <span class="number">1</span>)
-            })
-            .is_ok()
+            }) {
+            <span class="prelude-val">Ok</span>(previous) <span class="kw">if </span>previous == (<span class="self">Self</span>::COLLECTING_BIT | <span class="number">1</span>) =&gt; {
+                ReleaseReadResult::CollectAndUnpark
+            }
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; ReleaseReadResult::Collect,
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; ReleaseReadResult::Noop,
+        }
     }
+}
+
+<span class="kw">enum </span>ReleaseReadResult {
+    CollectAndUnpark,
+    Collect,
+    Noop,
 }
 
 <span class="kw">struct </span>CollectorReadGuard {
@@ -2242,17 +2273,20 @@
     }
 
     <span class="kw">fn </span>release_reader(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="self">self</span>.global.reader_state.release_read();
-        <span class="self">self</span>.global.collector_sync.notify_one();
+        <span class="kw">if </span><span class="self">self</span>.global.reader_state.release_read() {
+            <span class="self">self</span>.global.collector_unparker.unpark();
+        }
     }
 
     <span class="kw">fn </span>release_reader_if_collecting(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
-        <span class="kw">if </span><span class="self">self</span>.global.reader_state.release_read_if_collecting() {
-            <span class="self">self</span>.global.collector_sync.notify_one();
-            <span class="bool-val">true
-        </span>} <span class="kw">else </span>{
-            <span class="bool-val">false
-        </span>}
+        <span class="kw">match </span><span class="self">self</span>.global.reader_state.release_read_if_collecting() {
+            ReleaseReadResult::CollectAndUnpark =&gt; {
+                <span class="self">self</span>.global.collector_unparker.unpark();
+                <span class="bool-val">true
+            </span>}
+            ReleaseReadResult::Collect =&gt; <span class="bool-val">true</span>,
+            ReleaseReadResult::Noop =&gt; <span class="bool-val">false</span>,
+        }
     }
 }
 
