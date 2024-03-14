@@ -34,11 +34,11 @@ fn round_robin() {
     }
 
     collected(|| {
-        let mut guard = CollectionGuard::acquire();
+        let guard = CollectionGuard::acquire();
         for i in 0..WORK_ITEMS {
             channels[i % channels.len()]
                 .0
-                .send(Command::Enqueue(Root::new(WorkUnit::default(), &mut guard)))
+                .send(Command::Enqueue(Root::new(WorkUnit::default(), &guard)))
                 .expect("worker disconnected early");
         }
         drop(guard);
@@ -61,8 +61,8 @@ fn thread_worker(
     next_thread: &Sender<Command>,
     outstanding: &OutstandingWork,
 ) {
-    let mut guard = CollectionGuard::acquire();
-    let state = Root::new(Worker::default(), &mut guard);
+    let guard = CollectionGuard::acquire();
+    let state = Root::new(Worker::default(), &guard);
     drop(guard);
     while let Ok(work) = task_receiver.recv() {
         match work {

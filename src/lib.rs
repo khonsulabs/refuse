@@ -274,10 +274,9 @@ impl Collector {
         collector: &CollectorInfo,
         parker: &Parker,
     ) -> Option<AHashMap<CollectorThreadId, &'a mut Bins>> {
-        let force_gc = pause_failures >= 5;
-        let lock_wait = (average_collection_locking / 8)
-            .max(Duration::from_millis(2 * u64::from(pause_failures + 1)));
-        let long_lock_deadline = start + lock_wait * 8;
+        let force_gc = pause_failures >= 2;
+        let lock_wait = average_collection_locking * u32::from(pause_failures + 1) * 3;
+        let long_lock_deadline = start + lock_wait;
 
         if !collector.reader_state.write() {
             while collector.reader_state.readers() > 0 {
@@ -722,6 +721,18 @@ impl CollectionGuard {
     }
 }
 
+impl AsRef<CollectionGuard> for CollectionGuard {
+    fn as_ref(&self) -> &CollectionGuard {
+        self
+    }
+}
+
+impl AsMut<CollectionGuard> for CollectionGuard {
+    fn as_mut(&mut self) -> &mut CollectionGuard {
+        self
+    }
+}
+
 /// A type that can be garbage collected.
 pub trait Collectable: Send + Sync + 'static {
     /// If true, this type may contain references and should have its `trace()`
@@ -883,7 +894,7 @@ impl<T> Root<T>
 where
     T: Collectable,
 {
-    fn from_parts(slot_generation: u32, bin_id: BinId, guard: &mut CollectionGuard) -> Self {
+    fn from_parts(slot_generation: u32, bin_id: BinId, guard: &CollectionGuard) -> Self {
         // SAFETY: The guard is always present except during allocation which
         // never invokes this function. Since `bin_id` was just allocated, we
         // also can assume that it is allocated.
@@ -901,7 +912,8 @@ where
 
     /// Stores `value` in the garbage collector, returning a root reference to
     /// the data.
-    pub fn new(value: T, guard: &mut CollectionGuard) -> Self {
+    pub fn new(value: T, guard: impl AsRef<CollectionGuard>) -> Self {
+        let guard = guard.as_ref();
         let (gen, bin) = guard.adopt(RefCounted::strong(value));
         Self::from_parts(gen, bin, guard)
     }
@@ -910,6 +922,12 @@ where
     #[must_use]
     pub const fn downgrade(&self) -> Ref<T> {
         self.reference
+    }
+
+    /// Returns an untyped "weak" reference erased to this root.
+    #[must_use]
+    pub fn downgrade_any(&self) -> AnyRef {
+        self.reference.as_any()
     }
 
     fn ref_counted(&self) -> &RefCounted<T> {
@@ -973,7 +991,8 @@ where
 {
     /// Stores `value` in the garbage collector, returning a "weak" reference to
     /// it.
-    pub fn new(value: T, guard: &mut CollectionGuard) -> Self {
+    pub fn new(value: T, guard: impl AsRef<CollectionGuard>) -> Self {
+        let guard = guard.as_ref();
         let (slot_generation, bin_id) = guard.adopt(RefCounted::weak(value));
 
         Self {
@@ -981,6 +1000,17 @@ where
             slot_generation,
             bin_id,
             _t: PhantomData,
+        }
+    }
+
+    /// Returns this reference as an untyped reference.
+    #[must_use]
+    pub fn as_any(self) -> AnyRef {
+        AnyRef {
+            type_id: TypeId::of::<T>(),
+            creating_thread: self.creating_thread,
+            slot_generation: self.slot_generation,
+            bin_id: self.bin_id,
         }
     }
 
@@ -1053,6 +1083,15 @@ where
                 reference: *self,
             }
         })
+    }
+
+    /// Returns true if these two references point to the same underlying
+    /// allocation.
+    #[must_use]
+    pub fn ptr_eq(this: &Self, other: &Self) -> bool {
+        this.bin_id == other.bin_id
+            && this.creating_thread == other.creating_thread
+            && this.slot_generation == other.slot_generation
     }
 }
 
@@ -1658,4 +1697,38 @@ pub fn collect() {
     let now = Instant::now();
     CollectorCommand::Collect(now).send();
     GlobalCollector::get().info.wait_for_collection(now);
+}
+
+/// A type-erased garbage collected reference.
+pub struct AnyRef {
+    type_id: TypeId,
+    creating_thread: CollectorThreadId,
+    slot_generation: u32,
+    bin_id: BinId,
+}
+
+impl AnyRef {
+    /// Returns a [`Ref<T>`] if the underlying reference points to a `T`.
+    #[must_use]
+    pub fn downcast_ref<T>(&self) -> Option<Ref<T>>
+    where
+        T: Collectable,
+    {
+        (TypeId::of::<T>() == self.type_id).then_some(Ref {
+            creating_thread: self.creating_thread,
+            slot_generation: self.slot_generation,
+            bin_id: self.bin_id,
+            _t: PhantomData,
+        })
+    }
+
+    /// Returns a [`Strong<T>`] if the underlying reference points to a `T` that
+    /// has not been collected.
+    #[must_use]
+    pub fn downcast_root<T>(&self, guard: &CollectionGuard) -> Option<Root<T>>
+    where
+        T: Collectable,
+    {
+        self.downcast_ref().and_then(|r| r.as_root(guard))
+    }
 }

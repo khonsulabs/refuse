@@ -10,10 +10,10 @@ use musegc::{CollectionGuard, Root, Ref};
 
 // Execute a closure with access to a garbage collector.
 musegc::collected(|| {
-    let mut guard = CollectionGuard::acquire();
+    let guard = CollectionGuard::acquire();
     // Allocate a vec![Ref(1), Ref(2), Ref(3)].
-    let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &mut guard)).collect();
-    let values = Root::new(values, &mut guard);
+    let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &guard)).collect();
+    let values = Root::new(values, &guard);
     drop(guard);
 
     // Manually execute the garbage collector. Our data will not be freed,
@@ -33,7 +33,7 @@ musegc::collected(|| {
     // Dropping our root will allow the collector to free our `Ref`s.
     drop(values);
     guard.collect();
-    assert!(one.load(&guard).is_none());
+    assert_eq!(one.load(&guard), None);
 });
 ```
 

@@ -4,7 +4,7 @@ use musegc::{collected, CollectionGuard, Root};
 fn lifecycle() {
     collected(|| {
         let mut guard = CollectionGuard::acquire();
-        let strong = Root::new(42_u32, &mut guard);
+        let strong = Root::new(42_u32, &guard);
         let weak = strong.downgrade();
 
         assert_eq!(weak.load(&guard), Some(&42));

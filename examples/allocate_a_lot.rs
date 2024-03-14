@@ -11,7 +11,7 @@ fn main() {
                     let mut guard = CollectionGuard::acquire();
                     for _ in 0..100 {
                         for _ in 0..100 {
-                            Ref::new([0; 32], &mut guard);
+                            Ref::new([0; 32], &guard);
                         }
                         guard.yield_to_collector();
                     }

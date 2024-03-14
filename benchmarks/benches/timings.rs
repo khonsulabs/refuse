@@ -110,7 +110,7 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcRef {
             for _ in 0..OUTER_ITERS {
                 for i in 0..ITERS_PER_RELEASE {
                     let timing = measurements.begin(self.metric.clone());
-                    let result = black_box(Ref::new([0; 32], &mut guard));
+                    let result = black_box(Ref::new([0; 32], &guard));
                     if i == ITERS_PER_RELEASE - 1 {
                         allocated.clear();
                         guard.yield_to_collector();
@@ -162,7 +162,7 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcRoot {
             for _ in 0..OUTER_ITERS {
                 for i in 0..ITERS_PER_RELEASE {
                     let timing = measurements.begin(self.metric.clone());
-                    let result = black_box(Root::new([0; 32], &mut guard));
+                    let result = black_box(Root::new([0; 32], &guard));
                     if i == ITERS_PER_RELEASE - 1 {
                         allocated.clear();
                         guard.yield_to_collector();
