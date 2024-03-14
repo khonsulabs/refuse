@@ -390,7 +390,6 @@ dependencies = [
  "flume 0.11.0",
  "intentional",
  "kempt",
- "nanorand",
  "parking_lot",
 ]
 

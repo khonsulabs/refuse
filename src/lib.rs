@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 use std::{array, thread};
 
 use ahash::AHashMap;
+use crossbeam_utils::sync::{Parker, Unparker};
 use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
 use intentional::{Assert, Cast};
 use kempt::Map;
@@ -69,7 +70,7 @@ struct ThreadBins {
 struct CollectorInfo {
     info: Mutex<CollectorInfoData>,
     collection_sync: Condvar,
-    collector_sync: Condvar,
+    collector_unparker: Unparker,
     signalled_collector: AtomicBool,
     reader_state: ReaderState,
     all_threads: AllThreadBins,
@@ -153,7 +154,7 @@ impl Collector {
         }
     }
 
-    fn run(mut self) {
+    fn run(mut self, parker: &Parker) {
         thread::scope(|scope| {
             let (tracer, trace_receiver) = flume::bounded(128);
 
@@ -183,7 +184,7 @@ impl Collector {
                 let command = match self.next_command() {
                     Ok(Some(command)) => command,
                     Ok(None) => {
-                        self.collect_and_notify(&channels);
+                        self.collect_and_notify(&channels, parker);
                         continue;
                     }
                     Err(_) => break,
@@ -211,7 +212,7 @@ impl Collector {
                         let info = self.shared.info.lock();
                         if info.last_run < requested_at {
                             drop(info);
-                            self.collect_and_notify(&channels);
+                            self.collect_and_notify(&channels, parker);
                         }
                     }
                     CollectorCommand::ScheduleCollect => {
@@ -227,10 +228,10 @@ impl Collector {
         });
     }
 
-    fn collect_and_notify(&mut self, channels: &CollectorThreadChannels) {
+    fn collect_and_notify(&mut self, channels: &CollectorThreadChannels, parker: &Parker) {
         self.next_gc = None;
         let gc_start = Instant::now();
-        let collect_result = self.collect(channels);
+        let collect_result = self.collect(channels, parker);
         let gc_finish = Instant::now();
 
         let gc_pause = match collect_result {
@@ -271,6 +272,7 @@ impl Collector {
         average_collection_locking: Duration,
         pause_failures: u8,
         collector: &CollectorInfo,
+        parker: &Parker,
     ) -> Option<AHashMap<CollectorThreadId, &'a mut Bins>> {
         let force_gc = pause_failures >= 5;
         let lock_wait = (average_collection_locking / 8)
@@ -278,18 +280,16 @@ impl Collector {
         let long_lock_deadline = start + lock_wait * 8;
 
         if !collector.reader_state.write() {
-            let mut info_data = collector.info.lock();
             while collector.reader_state.readers() > 0 {
                 if force_gc {
-                    collector.collector_sync.wait(&mut info_data);
-                } else if collector
-                    .collector_sync
-                    .wait_until(&mut info_data, long_lock_deadline)
-                    .timed_out()
-                {
-                    collector.reader_state.release_write();
-                    collector.collection_sync.notify_all();
-                    return None;
+                    parker.park();
+                } else {
+                    parker.park_deadline(long_lock_deadline);
+                    if Instant::now() > long_lock_deadline && collector.reader_state.readers() > 0 {
+                        collector.reader_state.release_write();
+                        collector.collection_sync.notify_all();
+                        return None;
+                    }
                 }
             }
         }
@@ -302,7 +302,7 @@ impl Collector {
         )
     }
 
-    fn collect(&mut self, threads: &CollectorThreadChannels) -> CollectResult {
+    fn collect(&mut self, threads: &CollectorThreadChannels, parker: &Parker) -> CollectResult {
         self.mark_bits = self.mark_bits.wrapping_add(1);
         if self.mark_bits == 0 {
             self.mark_bits = 1;
@@ -315,6 +315,7 @@ impl Collector {
             self.average_collection_locking,
             self.pause_failures,
             &self.shared,
+            parker,
         ) else {
             self.pause_failures += 1;
             return CollectResult::CouldntRun;
@@ -421,12 +422,13 @@ impl GlobalCollector {
     fn get() -> &'static GlobalCollector {
         COLLECTOR.get_or_init(|| {
             let (sender, receiver) = flume::bounded(1024);
+            let parker = Parker::new();
             let info = Arc::new(CollectorInfo {
                 info: Mutex::new(CollectorInfoData {
                     last_run: Instant::now(),
                 }),
                 collection_sync: Condvar::new(),
-                collector_sync: Condvar::new(),
+                collector_unparker: parker.unparker().clone(),
                 signalled_collector: AtomicBool::new(false),
                 reader_state: ReaderState(AtomicUsize::new(0)),
                 all_threads: AllThreadBins::default(),
@@ -435,7 +437,7 @@ impl GlobalCollector {
                 .name(String::from("collector"))
                 .spawn({
                     let info = info.clone();
-                    move || Collector::new(receiver, info).run()
+                    move || Collector::new(receiver, info).run(&parker)
                 })
                 .expect("error starting collector thread");
             GlobalCollector { sender, info }
@@ -537,8 +539,8 @@ impl ReaderState {
             .is_ok()
     }
 
-    fn release_read(&self) {
-        self.0.fetch_sub(1, Ordering::Acquire);
+    fn release_read(&self) -> bool {
+        self.0.fetch_sub(1, Ordering::Acquire) == (Self::COLLECTING_BIT | 1)
     }
 
     fn write(&self) -> bool {
@@ -564,13 +566,25 @@ impl ReaderState {
         self.0.load(Ordering::Acquire) & !Self::COLLECTING_BIT
     }
 
-    fn release_read_if_collecting(&self) -> bool {
-        self.0
+    fn release_read_if_collecting(&self) -> ReleaseReadResult {
+        match self
+            .0
             .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
                 (state & Self::COLLECTING_BIT != 0).then_some(state - 1)
-            })
-            .is_ok()
+            }) {
+            Ok(previous) if previous == (Self::COLLECTING_BIT | 1) => {
+                ReleaseReadResult::CollectAndUnpark
+            }
+            Ok(_) => ReleaseReadResult::Collect,
+            Err(_) => ReleaseReadResult::Noop,
+        }
     }
+}
+
+enum ReleaseReadResult {
+    CollectAndUnpark,
+    Collect,
+    Noop,
 }
 
 struct CollectorReadGuard {
@@ -596,16 +610,19 @@ impl CollectorReadGuard {
     }
 
     fn release_reader(&mut self) {
-        self.global.reader_state.release_read();
-        self.global.collector_sync.notify_one();
+        if self.global.reader_state.release_read() {
+            self.global.collector_unparker.unpark();
+        }
     }
 
     fn release_reader_if_collecting(&mut self) -> bool {
-        if self.global.reader_state.release_read_if_collecting() {
-            self.global.collector_sync.notify_one();
-            true
-        } else {
-            false
+        match self.global.reader_state.release_read_if_collecting() {
+            ReleaseReadResult::CollectAndUnpark => {
+                self.global.collector_unparker.unpark();
+                true
+            }
+            ReleaseReadResult::Collect => true,
+            ReleaseReadResult::Noop => false,
         }
     }
 }

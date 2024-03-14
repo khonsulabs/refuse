@@ -11,12 +11,7 @@ crossbeam-utils = "0.8.19"
 flume = "0.11.0"
 intentional = "0.1.1"
 kempt = "0.2.3"
-nanorand = { version = "0.7.0", default-features = false, features = [
-    "std",
-    "wyrand",
-] }
-parking_lot = { version = "0.12.1", features = ["arc_lock"] }
-
+parking_lot = { version = "0.12.1" }
 
 [lints]
 clippy.pedantic = "warn"
