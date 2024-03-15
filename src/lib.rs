@@ -1064,9 +1064,9 @@ fn size_of_types() {
 
 /// A root reference to a `T` that has been allocated in the garbage collector.
 ///
-/// This type behaves very similarly to [`Arc<T>`]. It is cheap-to-clone,
-/// utilizing atomic reference counting to track the number of root references
-/// currently exist to the underlying value.
+/// This type behaves very similarly to [`Arc<T>`]. It implements `Deref<Target
+/// = T>`, and it is also cheap-to-clone, utilizing atomic reference counting to
+/// track the number of root references currently exist to the underlying value.
 ///
 /// While any root references exist for a given allocation, the garbage
 /// collector will not collect the allocation.

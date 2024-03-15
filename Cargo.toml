@@ -2,9 +2,14 @@
 
 [package]
 name = "refuse"
-version = "0.1.0"
+description = "An easy-to-use, incremental, multi-threaded garbage collector"
+version = "0.0.1"
 edition = "2021"
 rust-version = "1.73.0"
+repository = "https://github.com/khonsulabs/refuse"
+license = "MIT OR Apache-2.0"
+categories = ["memory-management"]
+keywords = ["gc", "garbage", "collector"]
 
 [dependencies]
 ahash = "0.8.11"

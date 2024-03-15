@@ -34,6 +34,9 @@ refuse::collected(|| {
 });
 ```
 
+As the version number indicates, this crate is in early development. No semver
+compatibility will be provided until `0.1.0`.
+
 ## Motivation
 
 While working on [Muse][muse], @Ecton recognized [the need for garbage
