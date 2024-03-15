@@ -12,11 +12,10 @@ categories = ["memory-management"]
 keywords = ["gc", "garbage", "collector"]
 
 [dependencies]
-ahash = "0.8.11"
 crossbeam-utils = "0.8.19"
 flume = "0.11.0"
 intentional = "0.1.1"
-kempt = "0.2.3"
+kempt = "0.2.4"
 parking_lot = { version = "0.12.1" }
 
 [lints]

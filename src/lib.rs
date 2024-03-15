@@ -1,5 +1,32 @@
 #![doc = include_str!("../README.md")]
 
+use core::slice;
+use std::alloc::{alloc_zeroed, Layout};
+use std::any::{Any, TypeId};
+use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
+use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
+use std::marker::PhantomData;
+use std::mem::ManuallyDrop;
+use std::num::{
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
+};
+use std::ops::Deref;
+use std::sync::atomic::{
+    self, AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
+    AtomicU64, AtomicU8, AtomicUsize, Ordering,
+};
+use std::sync::{Arc, OnceLock, Weak};
+use std::time::{Duration, Instant};
+use std::{array, thread};
+
+use crossbeam_utils::sync::{Parker, Unparker};
+use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
+use intentional::{Assert, Cast};
+use kempt::map::Field;
+use kempt::{Map, Set};
+use parking_lot::{Condvar, Mutex, RwLock};
+
 /// Architecture overview of the underlying design of Refuse.
 ///
 /// # Overview
@@ -120,28 +147,7 @@
 /// implementation invoked.
 pub mod architecture {}
 
-use core::slice;
-use std::alloc::{alloc_zeroed, Layout};
-use std::any::{Any, TypeId};
-use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
-use std::collections::hash_map;
-use std::marker::PhantomData;
-use std::mem::ManuallyDrop;
-use std::num::NonZeroUsize;
-use std::ops::Deref;
-use std::sync::atomic::{self, AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
-use std::sync::{Arc, OnceLock, Weak};
-use std::time::{Duration, Instant};
-use std::{array, thread};
-
-use ahash::AHashMap;
-use crossbeam_utils::sync::{Parker, Unparker};
-use flume::{Receiver, RecvError, RecvTimeoutError, Sender};
-use intentional::{Assert, Cast};
-use kempt::Map;
-use parking_lot::{Condvar, Mutex, RwLock};
-
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 struct CollectorThreadId(u32);
 
 impl CollectorThreadId {
@@ -182,7 +188,7 @@ impl CollectorCommand {
     }
 }
 
-type AllThreadBins = Arc<RwLock<AHashMap<CollectorThreadId, Weak<UnsafeBins>>>>;
+type AllThreadBins = Arc<RwLock<Map<CollectorThreadId, Weak<UnsafeBins>>>>;
 
 struct ThreadBins {
     alive: bool,
@@ -196,7 +202,7 @@ struct CollectorInfo {
     signalled_collector: AtomicBool,
     reader_state: ReaderState,
     all_threads: AllThreadBins,
-    type_indexes: RwLock<AHashMap<TypeId, TypeIndex>>,
+    type_indexes: RwLock<Map<TypeId, TypeIndex>>,
 }
 
 impl CollectorInfo {
@@ -235,7 +241,7 @@ struct MarkRequest {
 struct Collector {
     shared: Arc<CollectorInfo>,
     receiver: Receiver<CollectorCommand>,
-    thread_bins: AHashMap<CollectorThreadId, ThreadBins>,
+    thread_bins: Map<CollectorThreadId, ThreadBins>,
     active_threads: usize,
     mark_bits: u8,
     next_gc: Option<Instant>,
@@ -249,7 +255,7 @@ impl Collector {
         Self {
             shared,
             receiver,
-            thread_bins: AHashMap::new(),
+            thread_bins: Map::new(),
             active_threads: 0,
             mark_bits: 0,
             next_gc: None,
@@ -390,13 +396,13 @@ impl Collector {
     }
 
     fn acquire_all_locks<'a>(
-        thread_bins: &'a AHashMap<CollectorThreadId, ThreadBins>,
+        thread_bins: &'a Map<CollectorThreadId, ThreadBins>,
         start: Instant,
         average_collection_locking: Duration,
         pause_failures: u8,
         collector: &CollectorInfo,
         parker: &Parker,
-    ) -> Option<AHashMap<CollectorThreadId, &'a mut Bins>> {
+    ) -> Option<Map<CollectorThreadId, &'a mut Bins>> {
         let force_gc = pause_failures >= 2;
         let lock_wait = average_collection_locking * u32::from(pause_failures + 1) * 3;
         let long_lock_deadline = start + lock_wait;
@@ -419,7 +425,7 @@ impl Collector {
         Some(
             thread_bins
                 .iter()
-                .map(|(thread_id, bins)| (*thread_id, unsafe { bins.bins.assume_mut() }))
+                .map(|entry| (*entry.key(), unsafe { entry.value.bins.assume_mut() }))
                 .collect(),
         )
     }
@@ -506,7 +512,7 @@ impl Collector {
 
         atomic::fence(Ordering::Acquire);
         let mut threads_to_remove = Vec::new();
-        for (thread_id, bins) in all_bins {
+        for (thread_id, bins) in all_bins.into_iter().map(Field::into_parts) {
             let mut live_objects = 0_usize;
             for bin in bins.by_type.write().values_mut() {
                 live_objects = live_objects.saturating_add(bin.sweep(self.mark_bits));
@@ -639,7 +645,7 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
             loop {
                 let thread_id = CollectorThreadId::unique();
                 let mut threads = all_threads.write();
-                if let hash_map::Entry::Vacant(entry) = threads.entry(thread_id) {
+                if let kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
                     CollectorCommand::NewThread(thread_id, bins.clone()).send();
                     entry.insert(Arc::downgrade(&bins));
                     drop(threads);
@@ -948,18 +954,48 @@ pub trait SimpleType {}
 impl<T> NoMapping for T where T: SimpleType {}
 impl<T> ContainsNoRefs for T where T: SimpleType {}
 
-impl SimpleType for u8 {}
-impl SimpleType for u16 {}
-impl SimpleType for u32 {}
-impl SimpleType for u64 {}
-impl SimpleType for u128 {}
-impl SimpleType for usize {}
-impl SimpleType for i8 {}
-impl SimpleType for i16 {}
-impl SimpleType for i32 {}
-impl SimpleType for i64 {}
-impl SimpleType for i128 {}
-impl SimpleType for isize {}
+macro_rules! impl_simple_type {
+    ($($ty:ty),+ ,) => {
+        $(impl SimpleType for $ty {})+
+    }
+}
+
+impl_simple_type!(
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    usize,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    isize,
+    AtomicU8,
+    AtomicU16,
+    AtomicU32,
+    AtomicU64,
+    AtomicUsize,
+    AtomicI8,
+    AtomicI16,
+    AtomicI32,
+    AtomicI64,
+    AtomicIsize,
+    NonZeroU8,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    NonZeroU128,
+    NonZeroUsize,
+    NonZeroI8,
+    NonZeroI16,
+    NonZeroI32,
+    NonZeroI64,
+    NonZeroI128,
+    NonZeroIsize,
+);
 
 impl<T> Trace for Vec<T>
 where
@@ -975,6 +1011,147 @@ where
 }
 
 impl<T> NoMapping for Vec<T> {}
+
+impl<T> Trace for VecDeque<T>
+where
+    T: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for item in self {
+            item.trace(tracer);
+        }
+    }
+}
+
+impl<T> NoMapping for VecDeque<T> {}
+
+impl<T> Trace for BinaryHeap<T>
+where
+    T: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for item in self {
+            item.trace(tracer);
+        }
+    }
+}
+
+impl<T> NoMapping for BinaryHeap<T> {}
+
+impl<T> Trace for LinkedList<T>
+where
+    T: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for item in self {
+            item.trace(tracer);
+        }
+    }
+}
+
+impl<T> NoMapping for LinkedList<T> {}
+
+impl<K, V, S> Trace for HashMap<K, V, S>
+where
+    K: Trace,
+    V: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES || V::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for (k, v) in self {
+            k.trace(tracer);
+            v.trace(tracer);
+        }
+    }
+}
+
+impl<K, V, S> NoMapping for HashMap<K, V, S> {}
+
+impl<K, S> Trace for HashSet<K, S>
+where
+    K: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for k in self {
+            k.trace(tracer);
+        }
+    }
+}
+
+impl<K, S> NoMapping for HashSet<K, S> {}
+
+impl<K, V> Trace for BTreeMap<K, V>
+where
+    K: Trace,
+    V: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES || V::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for (k, v) in self {
+            k.trace(tracer);
+            v.trace(tracer);
+        }
+    }
+}
+
+impl<K, V> NoMapping for BTreeMap<K, V> {}
+
+impl<K> Trace for BTreeSet<K>
+where
+    K: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for k in self {
+            k.trace(tracer);
+        }
+    }
+}
+
+impl<K> NoMapping for BTreeSet<K> {}
+
+impl<K, V> Trace for Map<K, V>
+where
+    K: Trace + kempt::Sort,
+    V: Trace,
+{
+    const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES || V::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for field in self {
+            field.key().trace(tracer);
+            field.value.trace(tracer);
+        }
+    }
+}
+
+impl<K, V> NoMapping for Map<K, V> where K: kempt::Sort {}
+
+impl<K> Trace for Set<K>
+where
+    K: Trace + kempt::Sort,
+{
+    const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        for k in self {
+            k.trace(tracer);
+        }
+    }
+}
+
+impl<K> NoMapping for Set<K> where K: kempt::Sort {}
 
 impl<T, const N: usize> Trace for [T; N]
 where
