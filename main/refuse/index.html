@@ -60,7 +60,7 @@ the guard, which prevents collection from running while any guards are held.</p>
 <li>Load an <code>&amp;T</code> from a <code>Ref&lt;T&gt;</code></li>
 </ul>
 <h3 id="safety"><a class="doc-anchor" href="#safety">§</a>Safety</h3>
-<p>This crate has safety comments next to each usage of unsafe, but and passes Miri
+<p>This crate has safety comments next to each usage of unsafe, and passes Miri
 tests when provided the flags:</p>
 <div class="example-wrap"><pre class="language-sh"><code>MIRIFLAGS=&quot;-Zmiri-permissive-provenance -Zmiri-ignore-leaks&quot; cargo +nightly miri test
 </code></pre></div>
@@ -92,11 +92,11 @@ leaks.</strong> Specifically:</p>
 <ul>
 <li>Reference cycles between <code>Root&lt;T&gt;</code>’s will lead to leaks just as <code>Arc&lt;T&gt;</code>’s
 will.</li>
-<li>If a <code>Root&lt;T&gt;</code> uses locking for interior mutability, holding a lock without
-a collector guard can cause the garbage collector to block until the lock is
+<li>If a <code>Root&lt;T&gt;</code> uses locking for interior mutability, holding a lock without a
+collector guard can cause the garbage collector to block until the lock is
 released. This escalates from a pause to a deadlock if the lock can’t be
-released without acquiring a collection guard. <strong>All locks should acquired and
-dropped only while a <code>CollectorGuard</code> is acquired.</strong></li>
+released without acquiring a collection guard. <strong>All locks should be acquired
+and dropped only while a <code>CollectorGuard</code> is acquired.</strong></li>
 </ul>
 <h3 id="whats-left"><a class="doc-anchor" href="#whats-left">§</a>What’s left</h3>
 <ul>
