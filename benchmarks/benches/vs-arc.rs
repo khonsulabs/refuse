@@ -3,16 +3,16 @@
 use std::sync::Arc;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use musegc::{collected, CollectionGuard, Ref, Root};
+use refuse::{collected, CollectionGuard, Ref, Root};
 
 fn arc_string() -> Arc<[u8; 32]> {
     Arc::new([0; 32])
 }
 
-fn strong_string(guard: &mut CollectionGuard) -> Root<[u8; 32]> {
+fn root_string(guard: &mut CollectionGuard) -> Root<[u8; 32]> {
     Root::new([0; 32], guard)
 }
-fn weak_string(guard: &mut CollectionGuard) -> Ref<[u8; 32]> {
+fn ref_string(guard: &mut CollectionGuard) -> Ref<[u8; 32]> {
     Ref::new([0; 32], guard)
 }
 
@@ -23,13 +23,13 @@ fn criterion_benchmark(c: &mut Criterion) {
         group.bench_function("ref", |b| {
             b.iter(move || {
                 let mut guard = CollectionGuard::acquire();
-                black_box(weak_string(&mut guard))
+                black_box(ref_string(&mut guard))
             });
         });
         group.bench_function("root", |b| {
             b.iter(move || {
                 let mut guard = CollectionGuard::acquire();
-                black_box(strong_string(&mut guard))
+                black_box(root_string(&mut guard))
             });
         });
     });

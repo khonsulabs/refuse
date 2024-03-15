@@ -5,8 +5,8 @@ use std::thread;
 use std::time::Duration;
 
 use flume::{Receiver, Sender};
-use musegc::{collected, CollectionGuard, NoMapping, Ref, Root, SimpleType, Trace};
 use parking_lot::Mutex;
+use refuse::{collected, CollectionGuard, NoMapping, Ref, Root, SimpleType, Trace};
 
 const WORK_ITERS: usize = 64;
 const WORK_ITEMS: usize = 64;
@@ -153,7 +153,7 @@ struct Worker {
 impl Trace for Worker {
     const MAY_CONTAIN_REFERENCES: bool = true;
 
-    fn trace(&self, tracer: &mut musegc::Tracer) {
+    fn trace(&self, tracer: &mut refuse::Tracer) {
         let queue = self.queue.lock();
         queue.items.trace(tracer);
     }

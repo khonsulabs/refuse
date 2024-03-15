@@ -1,4 +1,125 @@
 #![doc = include_str!("../README.md")]
+
+/// Architecture overview of the underlying design of Refuse.
+///
+/// # Overview
+///
+/// *Refuse* is an incremental, tracing garbage collector. Incremental garbage
+/// collectors can only run when it knows no threads are currently accessing
+/// collectable memory. This fits the access pattern of an `RwLock`: the
+/// collector can acquire a "write" lock to ensure that all other threads can't
+/// read while it is running.
+///
+/// Originally, Refuse used an `RwLock` and a shared allocation arena. This did
+/// not perform well in multi-threaded benchmarks. So the global `RwLock` was
+/// replaced with atomic tracking the number of currently acquired
+/// [`CollectionGuard`] and whether the collector is currently trying to start
+/// collection.
+///
+/// Each thread allocates its own independent allocation arena and stores a copy
+/// of it in thread-local storage. It also registers a copy with the global
+/// collector. Refuse's public API ensures that no access is provided to the
+/// local thread's data without first having acquired a [`CollectionGuard`].
+/// This ensures that the collector can guarantee exclusive access to the
+/// underlying data.
+///
+/// # Allocation Arenas
+///
+/// Each thread is given its own allocation arena, which is a data structure
+/// designed for concurrently reading portions of its data while still being
+/// able to perform new allocations from the owning thread.
+///
+/// At the root of each arena is a map of types to type-erased `Bin<T>`s. A
+/// `Bin<T>` is the root of a linked-list of `Slabs<T>`. Each `Slabs<T>`
+/// contains a list of `Slab<T>`s and an optional next `Slabs<T>`. Each
+/// `Slab<T>` holds 256 `Slot<T>`s. Each slot is a combination of the slot's
+/// state, and the slot's data.
+///
+/// The slot's state is stored in an atomic and keeps track of:
+///
+/// - A 32-bit generation. When loading a [`Ref`], its generation is validated
+///   to ensure it is the same allocation.
+/// - Whether the slot is allocated or not
+/// - Garbage collector marking bits
+///
+/// The owning thread or and the collector are the only types that can modify
+/// non-atomic data in a `Bin<T>`. Other threads may need to load a reference to
+/// a `Ref<T>`'s underlying data while the owning thread is allocating. This is
+/// made safe by:
+///
+/// - Because allocations for a new slab can't be referred to until after the
+///   allocating function returns, we can update `Slabs::next` safely while
+///   other threads read the data structure.
+/// - Each slot's state is controlled with atomic operations. This ensures
+///   consistent access for both the reading thread and the allocating thread.
+/// - The slot's state is generational, minimizing the chance of an invalid
+///   reference being promoted. Even if a "stale" ref contains a reused
+///   generation, the load will still point to valid data because of the order
+///   of initialization.
+///
+/// # Collection
+///
+/// Refuse is a naive, mark-and-sweep collector. Each collection phase is
+/// divided into three portions:
+///
+/// - Exclusive Access Acquisition
+/// - Tracing and marking
+/// - Sweeping
+///
+/// Refuse keeps track of two metrics:
+///
+/// - `average_collection_locking`: The average duration to acquire exclusive
+///   access.
+/// - `average_collection`: The average duration of a total collection process,
+///   including exclusive access acquisition.
+///
+/// ## Exclusive Access Acquisition
+///
+/// Refuse's goal is to be able to be used in nearly any application, including
+/// games. Games typically do not want to dip below 60 frames-per-second (FPS),
+/// which means that if a garbage collection pause is longer than 16ms, it will
+/// cause FPS drops.
+///
+/// Refuse tries to minimize pauses by waiting for exclusive access only for a
+/// multiple of `average_collection_locking`. If access isn't acquired by the
+/// deadline, collection is rescheduled again in the near future with an
+/// increased multiple. If this process fails several times consecutively,
+/// garbage collection will be forced by waiting indefinitely.
+///
+/// Access is controlled by a single [`AtomicUsize`]. A single bit keeps track
+/// of whether the collector is trying to collect or not. The remaining bits
+/// keep track of how many [`CollectionGuard`]s are acquired and not yielding.
+///
+/// [`CollectionGuard::acquire()`] checks if the collection bit is set. If it
+/// is, it waits until the current collection finishes and checks again. If the
+/// bit is not set, the count is atomically incremented.
+///
+/// When the final [`CollectionGuard`] drops or yields, it notifies the
+/// collector thread so that it can begin collecting.
+///
+/// ## Tracing and marking
+///
+/// The goal of this phase is to identify all allocations that can currently be
+/// reached by any [`Root<T>`]. When a slot is initially allocated, the marking
+/// bits are 0. Each time the collector runs, a new non-zero marking bits is
+/// selected by incrementing the previous marking bits and skipping 0 on wrap.
+///
+/// All `Bin<T>`s of all threads are scanned for any `Slot<T>` that is allocated
+/// and has a non-zero root count. Each allocated slot is then marked. If the
+/// slot didn't already contain the current marking bits, it is [`Trace`]d,
+/// which allows any references found to be marked.
+///
+/// This process continues until all found references are marked and traced.
+///
+/// ## Sweeping
+///
+/// The goal of this phase is to free allocations that are no longer reachable.
+/// This is done by scanning all `Bin<T>`s of all threads looking for any
+/// allocated `Slot<T>`s that do not contain the current marking bits. When
+/// found, the slot is deallocated and contained data has its `Drop`
+/// implementation invoked.
+pub mod architecture {}
+
 use core::slice;
 use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
@@ -20,11 +141,11 @@ use kempt::Map;
 use parking_lot::{Condvar, Mutex, RwLock};
 
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
-struct CollectorThreadId(u64);
+struct CollectorThreadId(u32);
 
 impl CollectorThreadId {
     fn unique() -> Self {
-        static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+        static NEXT_ID: AtomicU32 = AtomicU32::new(0);
         Self(NEXT_ID.fetch_add(1, Ordering::Release))
     }
 }
@@ -74,6 +195,7 @@ struct CollectorInfo {
     signalled_collector: AtomicBool,
     reader_state: ReaderState,
     all_threads: AllThreadBins,
+    type_indexes: RwLock<AHashMap<TypeId, TypeIndex>>,
 }
 
 impl CollectorInfo {
@@ -102,7 +224,7 @@ struct TraceRequest {
 
 struct MarkRequest {
     thread: CollectorThreadId,
-    type_id: TypeId,
+    type_index: TypeIndex,
     slot_generation: u32,
     bin_id: BinId,
     mark_bits: u8,
@@ -345,7 +467,7 @@ impl Collector {
         loop {
             let MarkRequest {
                 thread,
-                type_id,
+                type_index,
                 slot_generation,
                 bin_id,
                 mark_bits,
@@ -369,7 +491,7 @@ impl Collector {
             let bins = all_bins[&thread]
                 .by_type
                 .read()
-                .get(&type_id)
+                .get(&type_index)
                 .expect("areas are never deallocated")
                 .clone();
             if bins.mark_one(mark_bits, slot_generation, bin_id) {
@@ -431,6 +553,7 @@ impl GlobalCollector {
                 signalled_collector: AtomicBool::new(false),
                 reader_state: ReaderState(AtomicUsize::new(0)),
                 all_threads: AllThreadBins::default(),
+                type_indexes: RwLock::default(),
             });
             thread::Builder::new()
                 .name(String::from("collector"))
@@ -715,9 +838,8 @@ impl CollectionGuard {
         result
     }
 
-    fn adopt<T: Collectable>(&self, value: RefCounted<T>) -> (u32, BinId) {
-        let (gen, bin) = Bins::adopt(value, self);
-        (gen, bin)
+    fn adopt<T: Collectable>(&self, value: Rooted<T>) -> (TypeIndex, u32, BinId) {
+        Bins::adopt(value, self)
     }
 }
 
@@ -916,7 +1038,7 @@ impl<'a> Tracer<'a> {
         self.mark_one_sender
             .send(MarkRequest {
                 thread: collectable.creating_thread,
-                type_id: TypeId::of::<T>(),
+                type_index: collectable.type_index,
                 slot_generation: collectable.slot_generation,
                 bin_id: collectable.bin_id,
                 mark_bits: self.mark_bit,
@@ -930,6 +1052,7 @@ impl<'a> Tracer<'a> {
 fn size_of_types() {
     assert_eq!(std::mem::size_of::<Root<u32>>(), 24);
     assert_eq!(std::mem::size_of::<Ref<u32>>(), 16);
+    assert_eq!(std::mem::size_of::<AnyRef>(), 16);
 }
 
 /// A root reference to a `T` that has been allocated in the garbage collector.
@@ -944,7 +1067,7 @@ pub struct Root<T>
 where
     T: Collectable,
 {
-    data: *const RefCounted<T>,
+    data: *const Rooted<T>,
     reference: Ref<T>,
 }
 
@@ -952,14 +1075,20 @@ impl<T> Root<T>
 where
     T: Collectable,
 {
-    fn from_parts(slot_generation: u32, bin_id: BinId, guard: &CollectionGuard) -> Self {
+    fn from_parts(
+        type_index: TypeIndex,
+        slot_generation: u32,
+        bin_id: BinId,
+        guard: &CollectionGuard,
+    ) -> Self {
         // SAFETY: The guard is always present except during allocation which
         // never invokes this function. Since `bin_id` was just allocated, we
         // also can assume that it is allocated.
-        let data = unsafe { guard.bins().allocated_slot_pointer::<T>(bin_id) };
+        let data = unsafe { guard.bins().allocated_slot_pointer::<T>(type_index, bin_id) };
         Self {
             data,
             reference: Ref {
+                type_index,
                 creating_thread: guard.thread.thread_id,
                 slot_generation,
                 bin_id,
@@ -972,8 +1101,8 @@ where
     /// the data.
     pub fn new(value: T, guard: impl AsRef<CollectionGuard>) -> Self {
         let guard = guard.as_ref();
-        let (gen, bin) = guard.adopt(RefCounted::strong(value));
-        Self::from_parts(gen, bin, guard)
+        let (type_index, gen, bin) = guard.adopt(Rooted::root(value));
+        Self::from_parts(type_index, gen, bin, guard)
     }
 
     /// Returns a "weak" reference to this root.
@@ -988,12 +1117,26 @@ where
         self.reference.as_any()
     }
 
-    fn ref_counted(&self) -> &RefCounted<T> {
+    fn as_rooted(&self) -> &Rooted<T> {
         // SAFETY: The garbage collector will not collect data while we have a
-        // strong count. The returned lifetime of the data is tied to `self`,
-        // which ensures the returned lifetime is valid only for as long as this
-        // `Root<T>` is alive.
+        // non-zero root count. The returned lifetime of the data is tied to
+        // `self`, which ensures the returned lifetime is valid only for as long
+        // as this `Root<T>` is alive. This ensures at least one root will
+        // remain in existence, preventing the count from reaching 0.
         unsafe { &(*self.data) }
+    }
+}
+
+impl<T> Clone for Root<T>
+where
+    T: Collectable,
+{
+    fn clone(&self) -> Self {
+        self.as_rooted().roots.fetch_add(1, Ordering::Acquire);
+        Self {
+            data: self.data,
+            reference: self.reference,
+        }
     }
 }
 
@@ -1013,7 +1156,7 @@ where
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.ref_counted().value
+        &self.as_rooted().value
     }
 }
 
@@ -1022,7 +1165,7 @@ where
     T: Collectable,
 {
     fn drop(&mut self) {
-        if self.ref_counted().strong.fetch_sub(1, Ordering::Acquire) == 1 {
+        if self.as_rooted().roots.fetch_sub(1, Ordering::Acquire) == 1 {
             CollectorCommand::schedule_collect_if_needed();
         }
     }
@@ -1037,6 +1180,7 @@ where
 /// Because of this, direct access to the data is not provided. To obtain a
 /// reference, call [`Ref::load()`].
 pub struct Ref<T> {
+    type_index: TypeIndex,
     creating_thread: CollectorThreadId,
     slot_generation: u32,
     bin_id: BinId,
@@ -1051,9 +1195,10 @@ where
     /// it.
     pub fn new(value: T, guard: impl AsRef<CollectionGuard>) -> Self {
         let guard = guard.as_ref();
-        let (slot_generation, bin_id) = guard.adopt(RefCounted::weak(value));
+        let (type_index, slot_generation, bin_id) = guard.adopt(Rooted::reference(value));
 
         Self {
+            type_index,
             creating_thread: guard.thread.thread_id,
             slot_generation,
             bin_id,
@@ -1065,7 +1210,7 @@ where
     #[must_use]
     pub fn as_any(self) -> AnyRef {
         AnyRef {
-            type_id: TypeId::of::<T>(),
+            type_id: self.type_index,
             creating_thread: self.creating_thread,
             slot_generation: self.slot_generation,
             bin_id: self.bin_id,
@@ -1074,11 +1219,10 @@ where
 
     fn load_slot_from<'guard>(
         &self,
-        bins: &Map<TypeId, Arc<dyn AnyBin>>,
+        bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
         guard: &'guard CollectionGuard,
-    ) -> Option<&'guard RefCounted<T>> {
-        let type_id = TypeId::of::<T>();
-        bins.get(&type_id)
+    ) -> Option<&'guard Rooted<T>> {
+        bins.get(&self.type_index)
             .assert("areas are never deallocated")
             .as_any()
             .downcast_ref::<Bin<T>>()
@@ -1086,7 +1230,7 @@ where
             .load(self.bin_id, self.slot_generation, guard)
     }
 
-    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard RefCounted<T>> {
+    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard Rooted<T>> {
         if guard.thread.thread_id == self.creating_thread {
             self.load_slot_from(&guard.bins().by_type.read(), guard)
         } else {
@@ -1124,7 +1268,7 @@ where
     #[must_use]
     pub fn as_root(&self, guard: &CollectionGuard) -> Option<Root<T>> {
         self.load_slot(guard).map(|allocated| {
-            allocated.strong.fetch_add(1, Ordering::Acquire);
+            allocated.roots.fetch_add(1, Ordering::Acquire);
             Root {
                 data: allocated,
                 reference: *self,
@@ -1166,7 +1310,7 @@ pub struct CollectionStarting;
 
 #[derive(Default)]
 struct Bins {
-    by_type: RwLock<Map<TypeId, Arc<dyn AnyBin>>>,
+    by_type: RwLock<Map<TypeIndex, Arc<dyn AnyBin>>>,
 }
 
 impl Bins {
@@ -1174,13 +1318,17 @@ impl Bins {
     ///
     /// This function must only be called when `bin_id` is known to be
     /// allocated.
-    unsafe fn allocated_slot_pointer<T>(&self, bin_id: BinId) -> *const RefCounted<T>
+    unsafe fn allocated_slot_pointer<T>(
+        &self,
+        type_index: TypeIndex,
+        bin_id: BinId,
+    ) -> *const Rooted<T>
     where
         T: Collectable,
     {
         let by_type = self.by_type.read();
         let slot = &by_type
-            .get(&TypeId::of::<T>())
+            .get(&type_index)
             .expect("areas are never deallocated")
             .as_any()
             .downcast_ref::<Bin<T>>()
@@ -1193,11 +1341,11 @@ impl Bins {
         &*(*slot.value.get()).allocated
     }
 
-    fn adopt<T>(value: RefCounted<T>, bins_guard: &CollectionGuard) -> (u32, BinId)
+    fn adopt<T>(value: Rooted<T>, bins_guard: &CollectionGuard) -> (TypeIndex, u32, BinId)
     where
         T: Collectable,
     {
-        let type_id = TypeId::of::<T>();
+        let type_id = TypeIndex::of::<T>();
         let mut by_type = bins_guard.bins().by_type.upgradable_read();
         if let Some(bin) = by_type.get(&type_id) {
             let (gen, bin) = bin
@@ -1205,16 +1353,16 @@ impl Bins {
                 .downcast_ref::<Bin<T>>()
                 .expect("type mismatch")
                 .adopt(value);
-            (gen, bin)
+            (type_id, gen, bin)
         } else {
             by_type.with_upgraded(|by_type| {
                 // We don't need to check for another thread allocating, because the
                 // only thread that can allocate is the local thread. We needed a
                 // write guard, however, because other threads could be trying to
                 // load data this thread allocated.
-                let bin = Bin::new(value);
+                let bin = Bin::new(value, type_id);
                 by_type.insert(type_id, Arc::new(bin));
-                (0, BinId::first())
+                (type_id, 0, BinId::first())
             })
         }
     }
@@ -1224,6 +1372,7 @@ struct Bin<T>
 where
     T: Collectable,
 {
+    type_index: TypeIndex,
     free_head: AtomicU32,
     slabs: Slabs<T>,
     slabs_tail: Cell<Option<*const Slabs<T>>>,
@@ -1234,8 +1383,9 @@ impl<T> Bin<T>
 where
     T: Collectable,
 {
-    fn new(first_value: RefCounted<T>) -> Self {
+    fn new(first_value: Rooted<T>, type_index: TypeIndex) -> Self {
         Self {
+            type_index,
             free_head: AtomicU32::new(0),
             slabs: Slabs::new(first_value, 0),
             slabs_tail: Cell::new(None),
@@ -1243,7 +1393,8 @@ where
         }
     }
 
-    fn adopt(&self, value: RefCounted<T>) -> (u32, BinId) {
+    fn adopt(&self, value: Rooted<T>) -> (u32, BinId) {
+        let mut value = Some(value);
         loop {
             let bin_id = BinId(self.free_head.load(Ordering::Acquire));
             if bin_id.invalid() {
@@ -1252,19 +1403,19 @@ where
             let slab = &self.slabs[bin_id.slab() as usize];
             let slot_index = bin_id.slot();
             let slot = &slab.slots[usize::from(slot_index)];
-            if let Some(generation) = slot.state.try_allocate() {
-                // SAFETY: Unallocated slots are only accessed through the
-                // current local thread while a guard is held, which must be
-                // true for this function to be invoked. try_allocate ensures
-                // this slot wasn't previously allocated, making it safe for us
-                // to initialize the data with `value`.
-                let next = unsafe {
-                    let next = (*slot.value.get()).free;
-                    slot.value.get().write(SlotData {
-                        allocated: ManuallyDrop::new(value),
-                    });
-                    next
-                };
+
+            // SAFETY: Unallocated slots are only accessed through the
+            // current local thread while a guard is held, which must be
+            // true for this function to be invoked. try_allocate ensures
+            // this slot wasn't previously allocated, making it safe for us
+            // to initialize the data with `value`.
+            if let Some((generation, next)) = slot.state.try_allocate(|| unsafe {
+                let next = (*slot.value.get()).free;
+                slot.value.get().write(SlotData {
+                    allocated: ManuallyDrop::new(value.take().expect("only taken once")),
+                });
+                next
+            }) {
                 self.free_head.store(next, Ordering::Release);
                 let _result = slab.last_allocated.fetch_update(
                     Ordering::Release,
@@ -1282,7 +1433,7 @@ where
         } else {
             &self.slabs
         };
-        let (generation, bin_id, new_tail) = tail.adopt(value);
+        let (generation, bin_id, new_tail) = tail.adopt(value.take().expect("only taken once"));
 
         if new_tail.is_some() {
             self.slabs_tail.set(new_tail);
@@ -1295,7 +1446,7 @@ where
         bin_id: BinId,
         slot_generation: u32,
         _guard: &'guard CollectionGuard,
-    ) -> Option<&'guard RefCounted<T>> {
+    ) -> Option<&'guard Rooted<T>> {
         let slab = self.slabs.get(bin_id.slab() as usize)?;
         let slot = &slab.slots[usize::from(bin_id.slot())];
         slot.state
@@ -1330,10 +1481,11 @@ where
                 };
                 // SAFETY: `state.generation()` only returns `Some()` when the
                 // slot is allocated.
-                let strong_count =
-                    unsafe { (*slot.value.get()).allocated.strong.load(Ordering::Relaxed) };
-                if strong_count > 0 {
+                let root_count =
+                    unsafe { (*slot.value.get()).allocated.roots.load(Ordering::Relaxed) };
+                if root_count > 0 {
                     tracer.mark::<T>(Ref {
+                        type_index: self.type_index,
                         creating_thread: tracer.tracing_thread,
                         slot_generation,
                         bin_id: BinId::new(slab_index.cast::<u32>(), index.cast::<u8>()),
@@ -1485,7 +1637,7 @@ impl<T> Slabs<T>
 where
     T: Collectable,
 {
-    fn new(initial_value: RefCounted<T>, offset: usize) -> Self {
+    fn new(initial_value: Rooted<T>, offset: usize) -> Self {
         let mut initial_value = Some(initial_value);
         Self {
             offset,
@@ -1513,7 +1665,7 @@ where
         }
     }
 
-    fn adopt(&self, mut value: RefCounted<T>) -> (u32, BinId, Option<*const Slabs<T>>) {
+    fn adopt(&self, mut value: Rooted<T>) -> (u32, BinId, Option<*const Slabs<T>>) {
         let first_free = self.first_free_slab.get();
 
         for index in first_free..256 {
@@ -1607,7 +1759,7 @@ struct Slab<T> {
 }
 
 impl<T> Slab<T> {
-    fn new(first_value: RefCounted<T>) -> Box<Self>
+    fn new(first_value: Rooted<T>) -> Box<Self>
     where
         T: Collectable,
     {
@@ -1624,11 +1776,7 @@ impl<T> Slab<T> {
         this
     }
 
-    fn try_adopt(
-        &self,
-        value: RefCounted<T>,
-        slab_index: usize,
-    ) -> Result<(u32, BinId), RefCounted<T>> {
+    fn try_adopt(&self, value: Rooted<T>, slab_index: usize) -> Result<(u32, BinId), Rooted<T>> {
         if let Ok(last_allocated) = self.last_allocated.fetch_update(
             Ordering::Release,
             Ordering::Acquire,
@@ -1649,7 +1797,7 @@ impl<T> Slab<T> {
 }
 
 union SlotData<T> {
-    allocated: ManuallyDrop<RefCounted<T>>,
+    allocated: ManuallyDrop<Rooted<T>>,
     free: u32,
 }
 
@@ -1659,7 +1807,7 @@ struct Slot<T> {
 }
 
 impl<T> Slot<T> {
-    fn allocate(&self, value: RefCounted<T>) -> u32 {
+    fn allocate(&self, value: Rooted<T>) -> u32 {
         let generation = self.state.allocate();
         // SAFETY: `state.allocate()` will panic if the slot was previously
         // allocated.
@@ -1694,22 +1842,22 @@ unsafe impl<T> Send for Bin<T> where T: Collectable {}
 // SAFETY: Bin<T> is Sync as long as T is Sync.
 unsafe impl<T> Sync for Bin<T> where T: Collectable {}
 
-struct RefCounted<T> {
-    strong: AtomicU64,
+struct Rooted<T> {
+    roots: AtomicU64,
     value: T,
 }
 
-impl<T> RefCounted<T> {
-    fn weak(value: T) -> Self {
+impl<T> Rooted<T> {
+    fn reference(value: T) -> Self {
         Self {
-            strong: AtomicU64::new(0),
+            roots: AtomicU64::new(0),
             value,
         }
     }
 
-    fn strong(value: T) -> Self {
+    fn root(value: T) -> Self {
         Self {
-            strong: AtomicU64::new(1),
+            roots: AtomicU64::new(1),
             value,
         }
     }
@@ -1740,23 +1888,19 @@ impl SlotState {
         state & Self::ALLOCATED != 0 && state.cast::<u32>() == generation
     }
 
-    fn try_allocate(&self) -> Option<u32> {
-        let mut new_generation = None;
-        if self
-            .0
-            .fetch_update(Ordering::Release, Ordering::Acquire, |state| {
-                (state & Self::ALLOCATED == 0).then(|| {
-                    let generation = state.cast::<u32>().wrapping_add(1);
-                    new_generation = Some(generation);
-                    Self::ALLOCATED | u64::from(generation)
-                })
-            })
-            .is_ok()
-        {
-            new_generation
-        } else {
-            None
+    fn try_allocate<R>(&self, allocated: impl FnOnce() -> R) -> Option<(u32, R)> {
+        let state = self.0.load(Ordering::Acquire);
+        if state & Self::ALLOCATED != 0 {
+            return None;
         }
+
+        let result = allocated();
+        let generation = state.cast::<u32>().wrapping_add(1);
+
+        self.0
+            .store(Self::ALLOCATED | u64::from(generation), Ordering::Release);
+
+        Some((generation, result))
     }
 
     fn allocate(&self) -> u32 {
@@ -1823,9 +1967,31 @@ pub fn collect() {
     GlobalCollector::get().info.wait_for_collection(now);
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+struct TypeIndex(u32);
+
+impl TypeIndex {
+    fn of<T: 'static>() -> TypeIndex {
+        let collector = GlobalCollector::get();
+        let types = collector.info.type_indexes.read();
+        let type_id = TypeId::of::<T>();
+        if let Some(index) = types.get(&type_id) {
+            *index
+        } else {
+            drop(types);
+            let mut types = collector.info.type_indexes.write();
+            let next_id = types.len();
+
+            *types
+                .entry(type_id)
+                .or_insert(TypeIndex(u32::try_from(next_id).expect("too many types")))
+        }
+    }
+}
+
 /// A type-erased garbage collected reference.
 pub struct AnyRef {
-    type_id: TypeId,
+    type_id: TypeIndex,
     creating_thread: CollectorThreadId,
     slot_generation: u32,
     bin_id: BinId,
@@ -1838,7 +2004,15 @@ impl AnyRef {
     where
         T: Collectable,
     {
-        (TypeId::of::<T>() == self.type_id).then_some(Ref {
+        let correct_type = GlobalCollector::get()
+            .info
+            .type_indexes
+            .read()
+            .get(&TypeId::of::<T>())
+            == Some(&self.type_id);
+
+        correct_type.then_some(Ref {
+            type_index: self.type_id,
             creating_thread: self.creating_thread,
             slot_generation: self.slot_generation,
             bin_id: self.bin_id,
@@ -1846,7 +2020,7 @@ impl AnyRef {
         })
     }
 
-    /// Returns a [`Strong<T>`] if the underlying reference points to a `T` that
+    /// Returns a [`Root<T>`] if the underlying reference points to a `T` that
     /// has not been collected.
     #[must_use]
     pub fn downcast_root<T>(&self, guard: &CollectionGuard) -> Option<Root<T>>
@@ -1879,7 +2053,7 @@ impl AnyRef {
 
     fn load_mapped_slot_from<'guard, T>(
         &self,
-        bins: &Map<TypeId, Arc<dyn AnyBin>>,
+        bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
         guard: &'guard CollectionGuard,
     ) -> Option<&'guard T>
     where

@@ -1,10 +1,11 @@
 use refuse::{collected, CollectionGuard, Root};
 
 #[test]
-fn lifecycle() {
+fn clone() {
     collected(|| {
         let mut guard = CollectionGuard::acquire();
         let root = Root::new(42_u32, &guard);
+        let clone = root.clone();
         let reference = root.downgrade();
 
         assert_eq!(reference.load(&guard), Some(&42));
@@ -16,9 +17,13 @@ fn lifecycle() {
         // Drop the root reference.
         drop(root);
 
-        // Now collection should remove the value.
+        // We still have `clone`, this should still not free our data.
         guard.collect();
+        assert_eq!(reference.load(&guard), Some(&42));
 
+        // Drop the clone, and now the data should be freed.
+        drop(clone);
+        guard.collect();
         assert_eq!(reference.load(&guard), None);
     });
 }

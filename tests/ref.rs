@@ -1,4 +1,4 @@
-use musegc::{collected, CollectionGuard, Ref};
+use refuse::{collected, CollectionGuard, Ref};
 
 #[test]
 fn lifecycle() {

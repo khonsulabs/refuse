@@ -1,7 +1,7 @@
 //! An example demonstrating multithreaded allocations.
 //!
 //! This exists an easy executable to tweak and run with profiling tools.
-use musegc::{collected, CollectionGuard, Ref};
+use refuse::{collected, CollectionGuard, Ref};
 
 fn main() {
     std::thread::scope(|s| {

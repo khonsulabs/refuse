@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 criterion = "0.5"
 timings = { git = "https://github.com/khonsulabs/timings.git" }
-musegc = { path = "../" }
+refuse = { path = "../" }
 
 [[bench]]
 name = "vs-arc"

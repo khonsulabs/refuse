@@ -1,6 +1,7 @@
-workspace = { members = ["benchmarks"] }
+
+
 [package]
-name = "musegc"
+name = "refuse"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.73.0"
@@ -17,10 +18,12 @@ parking_lot = { version = "0.12.1" }
 clippy.pedantic = "warn"
 rust.missing_docs = "warn"
 
+[workspace]
+members = ["benchmarks"]
+
 [profile.release]
 debug = true
 lto = true
 
 [profile.bench]
-
 lto = true

@@ -4,7 +4,7 @@ use std::convert::Infallible;
 use std::hint::black_box;
 use std::sync::Arc;
 
-use musegc::{collected, CollectionGuard, Ref, Root};
+use refuse::{collected, CollectionGuard, Ref, Root};
 use timings::{Benchmark, BenchmarkImplementation, Label, LabeledTimings, Timings};
 
 const TOTAL_ITERS: usize = 100_000;

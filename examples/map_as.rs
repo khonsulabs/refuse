@@ -13,7 +13,7 @@
 //! [rustnomicon]:
 //!     https://doc.rust-lang.org/nomicon/exotic-sizes.html#dynamically-sized-types-dsts
 
-use musegc::{collected, AnyRef, CollectionGuard, ContainsNoRefs, MapAs, Ref};
+use refuse::{collected, AnyRef, CollectionGuard, ContainsNoRefs, MapAs, Ref};
 
 trait SomeTrait {
     fn do_something(&self);

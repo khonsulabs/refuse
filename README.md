@@ -1,15 +1,12 @@
-# musegc
-
-> This name is a placeholder. The design of this crate has nothing to do with
-> [Muse][muse], so naming it `muse-gc` seems misleading.
+# Refuse
 
 An easy-to-use, incremental, multi-threaded garbage collector for Rust.
 
 ```rust
-use musegc::{CollectionGuard, Root, Ref};
+use refuse::{CollectionGuard, Root, Ref};
 
 // Execute a closure with access to a garbage collector.
-musegc::collected(|| {
+refuse::collected(|| {
     let guard = CollectionGuard::acquire();
     // Allocate a vec![Ref(1), Ref(2), Ref(3)].
     let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &guard)).collect();
@@ -18,7 +15,7 @@ musegc::collected(|| {
 
     // Manually execute the garbage collector. Our data will not be freed,
     // since `values` is a "root" reference.
-    musegc::collect();
+    refuse::collect();
 
     // Root references allow direct access to their data, even when a
     // `CollectionGuard` isn't held.
@@ -84,9 +81,16 @@ MIRIFLAGS="-Zmiri-permissive-provenance -Zmiri-ignore-leaks" cargo +nightly miri
   from `parking_lot` couldn't be implemented in a fashion that honors pointer
   provinence. Thus, this library's author consider's this an implementation
   detail that can be ignored.
-- `-Zmiri-ignore-leaks`: This crate uses thread local storage which is
-  documented to not always run destructors for local keys on the main thread, as
-  some platforms abort rather than performing cleanup code.
+- `-Zmiri-ignore-leaks`: This crate spawns a global collector thread that never
+  shuts down. Miri detects that the main thread does not wait for spawned
+  threads to shut down and warns about this potential memory leak. When a thread
+  is shut down and all of its data is no longer reachable, the thread storage
+  will be cleaned up. However, the collector never shuts down and assumes that
+  new threads could still be spawned at any given time.
+
+  Additionally, on some platforms the main thread's thread-local storage may not
+  be cleaned up when the main thread exits according to [`LocalKey`'s
+  documentation][localkey]
 
 This crate exposes a safe API that guarantees no undefined behavior can be
 triggered by incorrectly using the API or implementing the `Collectable` trait
@@ -181,3 +185,4 @@ but when many threads are active, the pauses can be significant.
 
 [muse]: https://github.com/khonsulabs/muse
 [gc-issue]: https://github.com/khonsulabs/muse/issues/4
+[localkey]: https://doc.rust-lang.org/std/thread/struct.LocalKey.html#platform-specific-behavior

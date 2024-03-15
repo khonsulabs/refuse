@@ -1,10 +1,10 @@
 //! A basic usage example demonstrating the garbage collector.
-use musegc::{CollectionGuard, Ref, Root};
+use refuse::{CollectionGuard, Ref, Root};
 
 #[test]
 fn basic() {
     // Execute a closure with access to a garbage collector.
-    musegc::collected(|| {
+    refuse::collected(|| {
         let guard = CollectionGuard::acquire();
         // Allocate a vec![Ref(1), Ref(2), Ref(3)].
         let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &guard)).collect();
@@ -13,7 +13,7 @@ fn basic() {
 
         // Manually execute the garbage collector. Our data will not be freed,
         // since `values` is a "root" reference.
-        musegc::collect();
+        refuse::collect();
 
         // Root references allow direct access to their data, even when a
         // `CollectionGuard` isn't held.

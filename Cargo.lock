@@ -47,7 +47,7 @@ name = "benchmarks"
 version = "0.0.0"
 dependencies = [
  "criterion",
- "musegc",
+ "refuse",
  "timings",
 ]
 
@@ -382,18 +382,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
-name = "musegc"
-version = "0.1.0"
-dependencies = [
- "ahash",
- "crossbeam-utils",
- "flume 0.11.0",
- "intentional",
- "kempt",
- "parking_lot",
-]
-
-[[package]]
 name = "nanorand"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -584,6 +572,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4722d768eff46b75989dd134e5c353f0d6296e5aaa3132e776cbdb56be7731aa"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "refuse"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "crossbeam-utils",
+ "flume 0.11.0",
+ "intentional",
+ "kempt",
+ "parking_lot",
 ]
 
 [[package]]
