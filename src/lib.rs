@@ -1179,6 +1179,51 @@ where
 ///
 /// Because of this, direct access to the data is not provided. To obtain a
 /// reference, call [`Ref::load()`].
+///
+/// # Loading a reference
+///
+/// [`Ref::load()`] is used to provide a reference to data stored in the garbage
+/// collector.
+///
+/// ```rust
+/// use refuse::{CollectionGuard, Ref};
+///
+/// refuse::collected(|| {
+///     let guard = CollectionGuard::acquire();
+///     let data = Ref::new(42, &guard);
+///
+///     assert_eq!(data.load(&guard), Some(&42));
+/// });
+/// ```
+///
+/// References returned from [`Ref::load()`] are tied to the lifetime of the
+/// guard. This ensures that a reference to data can only be held between
+/// moments when the garbage collector can be run. For example these usages are
+/// prevented by the compiler:
+///
+/// ```rust,compile_fail
+/// # use refuse::{CollectionGuard, Ref};
+/// let guard = CollectionGuard::acquire();
+/// let data = Ref::new(42, &guard);
+/// let reference = data.load(&guard).unwrap();
+///
+/// drop(guard);
+///
+/// // error[E0505]: cannot move out of `guard` because it is borrowed
+/// assert_eq!(reference, &42);
+/// ```
+///
+/// ```rust,compile_fail
+/// # use refuse::{CollectionGuard, Ref};
+/// let mut guard = CollectionGuard::acquire();
+/// let data = Ref::new(42, &guard);
+/// let reference = data.load(&guard).unwrap();
+///
+/// guard.yield_to_collector();
+///
+/// // error[E0502]: cannot borrow `guard` as mutable because it is also borrowed as immutable
+/// assert_eq!(reference, &42);
+/// ```
 pub struct Ref<T> {
     type_index: TypeIndex,
     creating_thread: CollectorThreadId,
