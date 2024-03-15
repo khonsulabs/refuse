@@ -71,7 +71,7 @@ A `CollectionGuard` is needed to:
 
 ## Safety
 
-This crate has safety comments next to each usage of unsafe, but and passes Miri
+This crate has safety comments next to each usage of unsafe, and passes Miri
 tests when provided the flags:
 
 ```sh
@@ -102,11 +102,11 @@ leaks.** Specifically:
 
 - Reference cycles between `Root<T>`'s will lead to leaks just as `Arc<T>`'s
   will.
-- If a `Root<T>` uses locking for interior mutability, holding a lock without
-  a collector guard can cause the garbage collector to block until the lock is
+- If a `Root<T>` uses locking for interior mutability, holding a lock without a
+  collector guard can cause the garbage collector to block until the lock is
   released. This escalates from a pause to a deadlock if the lock can't be
-  released without acquiring a collection guard. **All locks should acquired and
-  dropped only while a `CollectorGuard` is acquired.**
+  released without acquiring a collection guard. **All locks should be acquired
+  and dropped only while a `CollectorGuard` is acquired.**
 
 ## What's left
 
