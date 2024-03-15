@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["collect","collected"],"struct":["AnyRef","CollectionGuard","CollectionStarting","Ref","Root","Tracer"],"trait":["Collectable","ContainsNoRefs","MapAs","NoMapping","SimpleType","Trace"]};

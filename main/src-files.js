@@ -1,4 +1,4 @@
 var srcIndex = new Map(JSON.parse('[\
-["musegc",["",[],["lib.rs"]]]\
+["refuse",["",[],["lib.rs"]]]\
 ]'));
 createSrcSidebar();

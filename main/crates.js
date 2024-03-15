@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["musegc"];
+window.ALL_CRATES = ["refuse"];

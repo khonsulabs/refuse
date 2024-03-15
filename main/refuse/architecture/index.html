@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Architecture overview of the underlying design of Refuse."><title>refuse::architecture - Rust</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (f4b771bf1 2024-03-14)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../refuse/index.html">refuse</a><span class="version">0.0.1</span></h2></div><h2 class="location"><a href="#">Module architecture</a></h2><div class="sidebar-elems"><h2><a href="../index.html">In crate refuse</a></h2></div></nav><div class="sidebar-resizer"></div>
+    <main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Module <a href="../index.html">refuse</a>::<wbr><a class="mod" href="#">architecture</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="src" href="../../src/refuse/lib.rs.html#148">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Architecture overview of the underlying design of Refuse.</p>
+<h2 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h2>
+<p><em>Refuse</em> is an incremental, tracing garbage collector. Incremental garbage
+collectors can only run when it knows no threads are currently accessing
+collectable memory. This fits the access pattern of an <code>RwLock</code>: the
+collector can acquire a “write” lock to ensure that all other threads can’t
+read while it is running.</p>
+<p>Originally, Refuse used an <code>RwLock</code> and a shared allocation arena. This did
+not perform well in multi-threaded benchmarks. So the global <code>RwLock</code> was
+replaced with atomic tracking the number of currently acquired
+<a href="../struct.CollectionGuard.html" title="struct refuse::CollectionGuard"><code>CollectionGuard</code></a> and whether the collector is currently trying to start
+collection.</p>
+<p>Each thread allocates its own independent allocation arena and stores a copy
+of it in thread-local storage. It also registers a copy with the global
+collector. Refuse’s public API ensures that no access is provided to the
+local thread’s data without first having acquired a <a href="../struct.CollectionGuard.html" title="struct refuse::CollectionGuard"><code>CollectionGuard</code></a>.
+This ensures that the collector can guarantee exclusive access to the
+underlying data.</p>
+<h2 id="allocation-arenas"><a class="doc-anchor" href="#allocation-arenas">§</a>Allocation Arenas</h2>
+<p>Each thread is given its own allocation arena, which is a data structure
+designed for concurrently reading portions of its data while still being
+able to perform new allocations from the owning thread.</p>
+<p>At the root of each arena is a map of types to type-erased <code>Bin&lt;T&gt;</code>s. A
+<code>Bin&lt;T&gt;</code> is the root of a linked-list of <code>Slabs&lt;T&gt;</code>. Each <code>Slabs&lt;T&gt;</code>
+contains a list of <code>Slab&lt;T&gt;</code>s and an optional next <code>Slabs&lt;T&gt;</code>. Each
+<code>Slab&lt;T&gt;</code> holds 256 <code>Slot&lt;T&gt;</code>s. Each slot is a combination of the slot’s
+state, and the slot’s data.</p>
+<p>The slot’s state is stored in an atomic and keeps track of:</p>
+<ul>
+<li>A 32-bit generation. When loading a <a href="../struct.Ref.html" title="struct refuse::Ref"><code>Ref</code></a>, its generation is validated
+to ensure it is the same allocation.</li>
+<li>Whether the slot is allocated or not</li>
+<li>Garbage collector marking bits</li>
+</ul>
+<p>The owning thread or and the collector are the only types that can modify
+non-atomic data in a <code>Bin&lt;T&gt;</code>. Other threads may need to load a reference to
+a <code>Ref&lt;T&gt;</code>’s underlying data while the owning thread is allocating. This is
+made safe by:</p>
+<ul>
+<li>Because allocations for a new slab can’t be referred to until after the
+allocating function returns, we can update <code>Slabs::next</code> safely while
+other threads read the data structure.</li>
+<li>Each slot’s state is controlled with atomic operations. This ensures
+consistent access for both the reading thread and the allocating thread.</li>
+<li>The slot’s state is generational, minimizing the chance of an invalid
+reference being promoted. Even if a “stale” ref contains a reused
+generation, the load will still point to valid data because of the order
+of initialization.</li>
+</ul>
+<h2 id="collection"><a class="doc-anchor" href="#collection">§</a>Collection</h2>
+<p>Refuse is a naive, mark-and-sweep collector. Each collection phase is
+divided into three portions:</p>
+<ul>
+<li>Exclusive Access Acquisition</li>
+<li>Tracing and marking</li>
+<li>Sweeping</li>
+</ul>
+<p>Refuse keeps track of two metrics:</p>
+<ul>
+<li><code>average_collection_locking</code>: The average duration to acquire exclusive
+access.</li>
+<li><code>average_collection</code>: The average duration of a total collection process,
+including exclusive access acquisition.</li>
+</ul>
+<h3 id="exclusive-access-acquisition"><a class="doc-anchor" href="#exclusive-access-acquisition">§</a>Exclusive Access Acquisition</h3>
+<p>Refuse’s goal is to be able to be used in nearly any application, including
+games. Games typically do not want to dip below 60 frames-per-second (FPS),
+which means that if a garbage collection pause is longer than 16ms, it will
+cause FPS drops.</p>
+<p>Refuse tries to minimize pauses by waiting for exclusive access only for a
+multiple of <code>average_collection_locking</code>. If access isn’t acquired by the
+deadline, collection is rescheduled again in the near future with an
+increased multiple. If this process fails several times consecutively,
+garbage collection will be forced by waiting indefinitely.</p>
+<p>Access is controlled by a single <a href="https://doc.rust-lang.org/nightly/core/sync/atomic/struct.AtomicUsize.html" title="struct core::sync::atomic::AtomicUsize"><code>AtomicUsize</code></a>. A single bit keeps track
+of whether the collector is trying to collect or not. The remaining bits
+keep track of how many <a href="../struct.CollectionGuard.html" title="struct refuse::CollectionGuard"><code>CollectionGuard</code></a>s are acquired and not yielding.</p>
+<p><a href="../struct.CollectionGuard.html#method.acquire" title="associated function refuse::CollectionGuard::acquire"><code>CollectionGuard::acquire()</code></a> checks if the collection bit is set. If it
+is, it waits until the current collection finishes and checks again. If the
+bit is not set, the count is atomically incremented.</p>
+<p>When the final <a href="../struct.CollectionGuard.html" title="struct refuse::CollectionGuard"><code>CollectionGuard</code></a> drops or yields, it notifies the
+collector thread so that it can begin collecting.</p>
+<h3 id="tracing-and-marking"><a class="doc-anchor" href="#tracing-and-marking">§</a>Tracing and marking</h3>
+<p>The goal of this phase is to identify all allocations that can currently be
+reached by any <a href="../struct.Root.html" title="struct refuse::Root"><code>Root&lt;T&gt;</code></a>. When a slot is initially allocated, the marking
+bits are 0. Each time the collector runs, a new non-zero marking bits is
+selected by incrementing the previous marking bits and skipping 0 on wrap.</p>
+<p>All <code>Bin&lt;T&gt;</code>s of all threads are scanned for any <code>Slot&lt;T&gt;</code> that is allocated
+and has a non-zero root count. Each allocated slot is then marked. If the
+slot didn’t already contain the current marking bits, it is <a href="../trait.Trace.html" title="trait refuse::Trace"><code>Trace</code></a>d,
+which allows any references found to be marked.</p>
+<p>This process continues until all found references are marked and traced.</p>
+<h3 id="sweeping"><a class="doc-anchor" href="#sweeping">§</a>Sweeping</h3>
+<p>The goal of this phase is to free allocations that are no longer reachable.
+This is done by scanning all <code>Bin&lt;T&gt;</code>s of all threads looking for any
+allocated <code>Slot&lt;T&gt;</code>s that do not contain the current marking bits. When
+found, the slot is deallocated and contained data has its <code>Drop</code>
+implementation invoked.</p>
+</div></details></section></div></main></body></html>
