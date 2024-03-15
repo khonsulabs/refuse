@@ -124,6 +124,7 @@ use core::slice;
 use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
 use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
+use std::collections::hash_map;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::num::NonZeroUsize;
@@ -635,13 +636,19 @@ pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
         lock.get_or_init(|| {
             let all_threads = GlobalCollector::get().info.all_threads.clone();
             let bins = Arc::<UnsafeBins>::default();
-            let thread_id = CollectorThreadId::unique();
-            CollectorCommand::NewThread(thread_id, bins.clone()).send();
-            all_threads.write().insert(thread_id, Arc::downgrade(&bins));
-            ThreadLocalBins {
-                bins,
-                thread_id,
-                all_threads,
+            loop {
+                let thread_id = CollectorThreadId::unique();
+                let mut threads = all_threads.write();
+                if let hash_map::Entry::Vacant(entry) = threads.entry(thread_id) {
+                    CollectorCommand::NewThread(thread_id, bins.clone()).send();
+                    entry.insert(Arc::downgrade(&bins));
+                    drop(threads);
+                    return ThreadLocalBins {
+                        bins,
+                        thread_id,
+                        all_threads,
+                    };
+                }
             }
         });
         wrapped()
@@ -1267,8 +1274,7 @@ where
         bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
         guard: &'guard CollectionGuard,
     ) -> Option<&'guard Rooted<T>> {
-        bins.get(&self.type_index)
-            .assert("areas are never deallocated")
+        bins.get(&self.type_index)?
             .as_any()
             .downcast_ref::<Bin<T>>()
             .assert("type mismatch")
@@ -2104,9 +2110,7 @@ impl AnyRef {
     where
         T: ?Sized + 'static,
     {
-        let bins = bins
-            .get(&self.type_id)
-            .assert("areas are never deallocated");
+        let bins = bins.get(&self.type_id)?;
 
         bins.mapper().downcast_ref::<Mapper<T>>()?.0.load_mapped(
             self.bin_id,
