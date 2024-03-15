@@ -5,7 +5,7 @@ use std::thread;
 use std::time::Duration;
 
 use flume::{Receiver, Sender};
-use musegc::{collected, Collectable, CollectionGuard, ContainsNoCollectables, Ref, Root};
+use musegc::{collected, CollectionGuard, NoMapping, Ref, Root, SimpleType, Trace};
 use parking_lot::Mutex;
 
 const WORK_ITERS: usize = 64;
@@ -143,14 +143,14 @@ impl Drop for WorkUnit {
     }
 }
 
-impl ContainsNoCollectables for WorkUnit {}
+impl SimpleType for WorkUnit {}
 
 #[derive(Default)]
 struct Worker {
     queue: Mutex<WorkQueue>,
 }
 
-impl Collectable for Worker {
+impl Trace for Worker {
     const MAY_CONTAIN_REFERENCES: bool = true;
 
     fn trace(&self, tracer: &mut musegc::Tracer) {
@@ -158,6 +158,8 @@ impl Collectable for Worker {
         queue.items.trace(tracer);
     }
 }
+
+impl NoMapping for Worker {}
 
 #[derive(Default)]
 struct WorkQueue {

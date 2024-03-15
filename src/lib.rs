@@ -734,7 +734,24 @@ impl AsMut<CollectionGuard> for CollectionGuard {
 }
 
 /// A type that can be garbage collected.
-pub trait Collectable: Send + Sync + 'static {
+///
+/// A type needs to implement both [`Trace`] and [`MapAs`] to be collectable.
+///
+/// If a type can't contain any [`Ref<T>`]s and no mapping functionality is
+/// desired, the [`SimpleType`] trait can be implemented instead of [`Trace`]
+/// and [`MapAs`] to enable collection.
+///
+/// If a type can't contain any [`Ref<T>`]s, [`ContainsNoRefs`] can be
+/// implemented instead of [`Trace`].
+///
+/// If no mapping functionality is desired, [`NoMapping`] can be implemented
+/// instead of [`MapAs`].
+pub trait Collectable: Trace + MapAs + Send + Sync + 'static {}
+
+impl<T> Collectable for T where T: Trace + MapAs + Send + Sync + 'static {}
+
+/// A type that can find and mark any references it has.
+pub trait Trace {
     /// If true, this type may contain references and should have its `trace()`
     /// function invoked during the collector's "mark" phase.
     const MAY_CONTAIN_REFERENCES: bool;
@@ -748,38 +765,76 @@ pub trait Collectable: Send + Sync + 'static {
     fn trace(&self, tracer: &mut Tracer);
 }
 
+/// A mapping from one type to another.
+///
+/// This trait is used by [`AnyRef::load_mapped()`] to enable type-erased
+/// loading of a secondary type.
+///
+/// If no mapping is desired, implement [`NoMapping`] instead.
+pub trait MapAs {
+    /// The target type of the mapping.
+    type Target: ?Sized + 'static;
+
+    /// Maps `self` to target type.
+    fn map_as(&self) -> &Self::Target;
+}
+
 /// A type that can be garbage collected that cannot contain any [`Ref<T>`]s.
 ///
 /// Types that implement this trait automatically implement [`Collectable`].
 /// This trait reduces the boilerplate for implementing [`Collectable`] for
 /// self-contained types.
-pub trait ContainsNoCollectables {}
+pub trait ContainsNoRefs {}
 
-impl<T> Collectable for T
+impl<T> Trace for T
 where
-    T: ContainsNoCollectables + Send + Sync + 'static,
+    T: ContainsNoRefs,
 {
     const MAY_CONTAIN_REFERENCES: bool = false;
 
     fn trace(&self, _tracer: &mut Tracer) {}
 }
 
-impl ContainsNoCollectables for u8 {}
-impl ContainsNoCollectables for u16 {}
-impl ContainsNoCollectables for u32 {}
-impl ContainsNoCollectables for u64 {}
-impl ContainsNoCollectables for u128 {}
-impl ContainsNoCollectables for usize {}
-impl ContainsNoCollectables for i8 {}
-impl ContainsNoCollectables for i16 {}
-impl ContainsNoCollectables for i32 {}
-impl ContainsNoCollectables for i64 {}
-impl ContainsNoCollectables for i128 {}
-impl ContainsNoCollectables for isize {}
+/// A type that implements [`MapAs`] with an empty implementation.
+pub trait NoMapping {}
 
-impl<T> Collectable for Vec<T>
+impl<T> MapAs for T
 where
-    T: Collectable,
+    T: NoMapping,
+{
+    type Target = ();
+
+    fn map_as(&self) -> &Self::Target {
+        &()
+    }
+}
+
+/// A type that can contain no [`Ref<T>`]s and has an empty [`MapAs`]
+/// implementation.
+///
+/// Implementing this trait for a type automatically implements [`NoMapping`]
+/// and [`ContainsNoRefs`], which makes the type [`Collectable`].
+pub trait SimpleType {}
+
+impl<T> NoMapping for T where T: SimpleType {}
+impl<T> ContainsNoRefs for T where T: SimpleType {}
+
+impl SimpleType for u8 {}
+impl SimpleType for u16 {}
+impl SimpleType for u32 {}
+impl SimpleType for u64 {}
+impl SimpleType for u128 {}
+impl SimpleType for usize {}
+impl SimpleType for i8 {}
+impl SimpleType for i16 {}
+impl SimpleType for i32 {}
+impl SimpleType for i64 {}
+impl SimpleType for i128 {}
+impl SimpleType for isize {}
+
+impl<T> Trace for Vec<T>
+where
+    T: Trace,
 {
     const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
 
@@ -790,9 +845,11 @@ where
     }
 }
 
-impl<T, const N: usize> Collectable for [T; N]
+impl<T> NoMapping for Vec<T> {}
+
+impl<T, const N: usize> Trace for [T; N]
 where
-    T: Collectable,
+    T: Trace,
 {
     const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
 
@@ -802,8 +859,9 @@ where
         }
     }
 }
+impl<T, const N: usize> NoMapping for [T; N] {}
 
-impl<T> Collectable for Root<T>
+impl<T> Trace for Root<T>
 where
     T: Collectable,
 {
@@ -815,7 +873,7 @@ where
     }
 }
 
-impl<T> Collectable for Ref<T>
+impl<T> Trace for Ref<T>
 where
     T: Collectable,
 {
@@ -1017,26 +1075,15 @@ where
     fn load_slot_from<'guard>(
         &self,
         bins: &Map<TypeId, Arc<dyn AnyBin>>,
-        _guard: &'guard CollectionGuard,
+        guard: &'guard CollectionGuard,
     ) -> Option<&'guard RefCounted<T>> {
         let type_id = TypeId::of::<T>();
-        let slabs = &bins
-            .get(&type_id)
+        bins.get(&type_id)
             .assert("areas are never deallocated")
             .as_any()
             .downcast_ref::<Bin<T>>()
             .assert("type mismatch")
-            .slabs;
-        let slab = slabs.get(self.bin_id.slab() as usize)?;
-        let slot = &slab.slots[usize::from(self.bin_id.slot())];
-        slot.state
-            .allocated_with_generation(self.slot_generation)
-            .then_some(
-                // SAFETY: The collector cannot collect data while `guard` is
-                // active, so it is safe to create a reference to this data
-                // bound to the guard's lifetime.
-                unsafe { &(*slot.value.get()).allocated },
-            )
+            .load(self.bin_id, self.slot_generation, guard)
     }
 
     fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard RefCounted<T>> {
@@ -1173,10 +1220,14 @@ impl Bins {
     }
 }
 
-struct Bin<T> {
+struct Bin<T>
+where
+    T: Collectable,
+{
     free_head: AtomicU32,
     slabs: Slabs<T>,
     slabs_tail: Cell<Option<*const Slabs<T>>>,
+    mapper: Mapper<T::Target>,
 }
 
 impl<T> Bin<T>
@@ -1188,6 +1239,7 @@ where
             free_head: AtomicU32::new(0),
             slabs: Slabs::new(first_value, 0),
             slabs_tail: Cell::new(None),
+            mapper: Mapper(Box::new(MappingFunction::<T>::new())),
         }
     }
 
@@ -1237,6 +1289,24 @@ where
         }
         (generation, bin_id)
     }
+
+    fn load<'guard>(
+        &self,
+        bin_id: BinId,
+        slot_generation: u32,
+        _guard: &'guard CollectionGuard,
+    ) -> Option<&'guard RefCounted<T>> {
+        let slab = self.slabs.get(bin_id.slab() as usize)?;
+        let slot = &slab.slots[usize::from(bin_id.slot())];
+        slot.state
+            .allocated_with_generation(slot_generation)
+            .then_some(
+                // SAFETY: The collector cannot collect data while `guard` is
+                // active, so it is safe to create a reference to this data
+                // bound to the guard's lifetime.
+                unsafe { &(*slot.value.get()).allocated },
+            )
+    }
 }
 
 trait AnyBin: Send + Sync {
@@ -1245,6 +1315,7 @@ trait AnyBin: Send + Sync {
     fn mark_one(&self, mark_bits: u8, slot_generation: u32, bin: BinId) -> bool;
     fn sweep(&self, mark_bits: u8) -> usize;
     fn as_any(&self) -> &dyn Any;
+    fn mapper(&self) -> &dyn Any;
 }
 
 impl<T> AnyBin for Bin<T>
@@ -1320,6 +1391,59 @@ where
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn mapper(&self) -> &dyn Any {
+        &self.mapper
+    }
+}
+
+struct Mapper<T>(Box<dyn MapFn<T>>)
+where
+    T: ?Sized + 'static;
+
+trait MapFn<T>
+where
+    T: ?Sized + 'static,
+{
+    fn load_mapped<'guard>(
+        &self,
+        id: BinId,
+        slot_generation: u32,
+        bin: &dyn AnyBin,
+        guard: &'guard CollectionGuard,
+    ) -> Option<&'guard T>;
+}
+
+struct MappingFunction<C: Collectable>(PhantomData<C>);
+
+impl<C> MappingFunction<C>
+where
+    C: Collectable,
+{
+    const fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<C> MapFn<C::Target> for MappingFunction<C>
+where
+    C: Collectable,
+{
+    fn load_mapped<'guard>(
+        &self,
+        id: BinId,
+        slot_generation: u32,
+        bin: &dyn AnyBin,
+        guard: &'guard CollectionGuard,
+    ) -> Option<&'guard C::Target> {
+        let ref_counted = bin
+            .as_any()
+            .downcast_ref::<Bin<C>>()
+            .expect("type mismatch")
+            .load(id, slot_generation, guard)?;
+
+        Some(ref_counted.value.map_as())
     }
 }
 
@@ -1566,9 +1690,9 @@ impl<T> Slot<T> {
 }
 
 // SAFETY: Bin<T> is Send as long as T is Send.
-unsafe impl<T> Send for Bin<T> where T: Send {}
+unsafe impl<T> Send for Bin<T> where T: Collectable {}
 // SAFETY: Bin<T> is Sync as long as T is Sync.
-unsafe impl<T> Sync for Bin<T> where T: Sync {}
+unsafe impl<T> Sync for Bin<T> where T: Collectable {}
 
 struct RefCounted<T> {
     strong: AtomicU64,
@@ -1730,5 +1854,46 @@ impl AnyRef {
         T: Collectable,
     {
         self.downcast_ref().and_then(|r| r.as_root(guard))
+    }
+
+    /// Returns a reference to the result of [`MapAs::map_as()`], if the value
+    /// has not been collected and [`MapAs::Target`] is `T`.
+    pub fn load_mapped<'guard, T>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T>
+    where
+        T: ?Sized + 'static,
+    {
+        if guard.thread.thread_id == self.creating_thread {
+            self.load_mapped_slot_from(&guard.bins().by_type.read(), guard)
+        } else {
+            let all_threads = guard.thread.all_threads.read();
+            let other_thread_bins = all_threads
+                .get(&self.creating_thread)
+                .and_then(Weak::upgrade)?;
+            let bins = guard.bins_for(&other_thread_bins);
+
+            let result = self.load_mapped_slot_from(&bins.by_type.read(), guard);
+            drop(other_thread_bins);
+            result
+        }
+    }
+
+    fn load_mapped_slot_from<'guard, T>(
+        &self,
+        bins: &Map<TypeId, Arc<dyn AnyBin>>,
+        guard: &'guard CollectionGuard,
+    ) -> Option<&'guard T>
+    where
+        T: ?Sized + 'static,
+    {
+        let bins = bins
+            .get(&self.type_id)
+            .assert("areas are never deallocated");
+
+        bins.mapper().downcast_ref::<Mapper<T>>()?.0.load_mapped(
+            self.bin_id,
+            self.slot_generation,
+            &**bins,
+            guard,
+        )
     }
 }
