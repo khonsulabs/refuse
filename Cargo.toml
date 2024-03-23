@@ -17,13 +17,14 @@ flume = "0.11.0"
 intentional = "0.1.1"
 kempt = "0.2.4"
 parking_lot = { version = "0.12.1" }
+refuse-macros = { path = "./refuse-macros" }
 
 [lints]
 clippy.pedantic = "warn"
 rust.missing_docs = "warn"
 
 [workspace]
-members = ["benchmarks"]
+members = ["benchmarks", "refuse-macros"]
 
 [profile.release]
 debug = true

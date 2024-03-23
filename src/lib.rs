@@ -26,6 +26,7 @@ use intentional::{Assert, Cast};
 use kempt::map::Field;
 use kempt::{Map, Set};
 use parking_lot::{Condvar, Mutex, RwLock};
+pub use refuse_macros::{collected, MapAs, Trace};
 
 /// Architecture overview of the underlying design of Refuse.
 ///
@@ -886,7 +887,7 @@ pub trait Collectable: Trace + MapAs + Send + Sync + 'static {}
 impl<T> Collectable for T where T: Trace + MapAs + Send + Sync + 'static {}
 
 /// A type that can find and mark any references it has.
-pub trait Trace {
+pub trait Trace: Send + Sync + 'static {
     /// If true, this type may contain references and should have its `trace()`
     /// function invoked during the collector's "mark" phase.
     const MAY_CONTAIN_REFERENCES: bool;
@@ -906,7 +907,7 @@ pub trait Trace {
 /// loading of a secondary type.
 ///
 /// If no mapping is desired, implement [`NoMapping`] instead.
-pub trait MapAs {
+pub trait MapAs: Send + Sync + 'static {
     /// The target type of the mapping.
     type Target: ?Sized + 'static;
 
@@ -919,7 +920,7 @@ pub trait MapAs {
 /// Types that implement this trait automatically implement [`Collectable`].
 /// This trait reduces the boilerplate for implementing [`Collectable`] for
 /// self-contained types.
-pub trait ContainsNoRefs {}
+pub trait ContainsNoRefs: Send + Sync + 'static {}
 
 impl<T> Trace for T
 where
@@ -931,7 +932,7 @@ where
 }
 
 /// A type that implements [`MapAs`] with an empty implementation.
-pub trait NoMapping {}
+pub trait NoMapping: Send + Sync + 'static {}
 
 impl<T> MapAs for T
 where
@@ -949,7 +950,7 @@ where
 ///
 /// Implementing this trait for a type automatically implements [`NoMapping`]
 /// and [`ContainsNoRefs`], which makes the type [`Collectable`].
-pub trait SimpleType {}
+pub trait SimpleType: Send + Sync + 'static {}
 
 impl<T> NoMapping for T where T: SimpleType {}
 impl<T> ContainsNoRefs for T where T: SimpleType {}
@@ -995,6 +996,7 @@ impl_simple_type!(
     NonZeroI64,
     NonZeroI128,
     NonZeroIsize,
+    String,
 );
 
 impl<T> Trace for Vec<T>
@@ -1010,7 +1012,7 @@ where
     }
 }
 
-impl<T> NoMapping for Vec<T> {}
+impl<T> NoMapping for Vec<T> where T: Send + Sync + 'static {}
 
 impl<T> Trace for VecDeque<T>
 where
@@ -1025,7 +1027,7 @@ where
     }
 }
 
-impl<T> NoMapping for VecDeque<T> {}
+impl<T> NoMapping for VecDeque<T> where T: Send + Sync + 'static {}
 
 impl<T> Trace for BinaryHeap<T>
 where
@@ -1040,7 +1042,7 @@ where
     }
 }
 
-impl<T> NoMapping for BinaryHeap<T> {}
+impl<T> NoMapping for BinaryHeap<T> where T: Send + Sync + 'static {}
 
 impl<T> Trace for LinkedList<T>
 where
@@ -1055,12 +1057,13 @@ where
     }
 }
 
-impl<T> NoMapping for LinkedList<T> {}
+impl<T> NoMapping for LinkedList<T> where T: Send + Sync + 'static {}
 
 impl<K, V, S> Trace for HashMap<K, V, S>
 where
     K: Trace,
     V: Trace,
+    S: Send + Sync + 'static,
 {
     const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES || V::MAY_CONTAIN_REFERENCES;
 
@@ -1072,11 +1075,18 @@ where
     }
 }
 
-impl<K, V, S> NoMapping for HashMap<K, V, S> {}
+impl<K, V, S> NoMapping for HashMap<K, V, S>
+where
+    K: Send + Sync + 'static,
+    V: Send + Sync + 'static,
+    S: Send + Sync + 'static,
+{
+}
 
 impl<K, S> Trace for HashSet<K, S>
 where
     K: Trace,
+    S: Send + Sync + 'static,
 {
     const MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES;
 
@@ -1087,7 +1097,12 @@ where
     }
 }
 
-impl<K, S> NoMapping for HashSet<K, S> {}
+impl<K, S> NoMapping for HashSet<K, S>
+where
+    K: Send + Sync + 'static,
+    S: Send + Sync + 'static,
+{
+}
 
 impl<K, V> Trace for BTreeMap<K, V>
 where
@@ -1104,7 +1119,12 @@ where
     }
 }
 
-impl<K, V> NoMapping for BTreeMap<K, V> {}
+impl<K, V> NoMapping for BTreeMap<K, V>
+where
+    K: Send + Sync + 'static,
+    V: Send + Sync + 'static,
+{
+}
 
 impl<K> Trace for BTreeSet<K>
 where
@@ -1119,7 +1139,7 @@ where
     }
 }
 
-impl<K> NoMapping for BTreeSet<K> {}
+impl<K> NoMapping for BTreeSet<K> where K: Send + Sync + 'static {}
 
 impl<K, V> Trace for Map<K, V>
 where
@@ -1136,7 +1156,12 @@ where
     }
 }
 
-impl<K, V> NoMapping for Map<K, V> where K: kempt::Sort {}
+impl<K, V> NoMapping for Map<K, V>
+where
+    K: kempt::Sort + Send + Sync + 'static,
+    V: Send + Sync + 'static,
+{
+}
 
 impl<K> Trace for Set<K>
 where
@@ -1151,7 +1176,7 @@ where
     }
 }
 
-impl<K> NoMapping for Set<K> where K: kempt::Sort {}
+impl<K> NoMapping for Set<K> where K: kempt::Sort + Send + Sync + 'static {}
 
 impl<T, const N: usize> Trace for [T; N]
 where
@@ -1165,13 +1190,13 @@ where
         }
     }
 }
-impl<T, const N: usize> NoMapping for [T; N] {}
+impl<T, const N: usize> NoMapping for [T; N] where T: Send + Sync + 'static {}
 
 impl<T> Trace for Root<T>
 where
     T: Collectable,
 {
-    const MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
+    const MAY_CONTAIN_REFERENCES: bool = false;
 
     fn trace(&self, _tracer: &mut Tracer) {
         // Root<T> is already a root, thus calling trace on a Root<T> has no
@@ -1187,6 +1212,12 @@ where
 
     fn trace(&self, tracer: &mut Tracer) {
         tracer.mark(*self);
+    }
+}
+
+impl<T> AsRef<Ref<T>> for Ref<T> {
+    fn as_ref(&self) -> &Ref<T> {
+        self
     }
 }
 
@@ -1215,14 +1246,12 @@ impl<'a> Tracer<'a> {
 
     /// Marks `collectable` as being referenced, ensuring it is not garbage
     /// collected.
-    pub fn mark<T>(&mut self, collectable: Ref<T>)
-    where
-        T: Collectable,
-    {
+    pub fn mark(&mut self, collectable: impl Into<AnyRef>) {
+        let collectable = collectable.into();
         self.mark_one_sender
             .send(MarkRequest {
                 thread: collectable.creating_thread,
-                type_index: collectable.type_index,
+                type_index: collectable.type_id,
                 slot_generation: collectable.slot_generation,
                 bin_id: collectable.bin_id,
                 mark_bits: self.mark_bit,
@@ -1232,7 +1261,7 @@ impl<'a> Tracer<'a> {
     }
 }
 
-#[test]
+#[std::prelude::v1::test]
 fn size_of_types() {
     assert_eq!(std::mem::size_of::<Root<u32>>(), 24);
     assert_eq!(std::mem::size_of::<Ref<u32>>(), 16);
@@ -1301,6 +1330,12 @@ where
         self.reference.as_any()
     }
 
+    /// Returns this reference as an untyped reference.
+    #[must_use]
+    pub fn as_any(&self) -> AnyRef {
+        self.reference.as_any()
+    }
+
     fn as_rooted(&self) -> &Rooted<T> {
         // SAFETY: The garbage collector will not collect data while we have a
         // non-zero root count. The returned lifetime of the data is tied to
@@ -1321,6 +1356,15 @@ where
             data: self.data,
             reference: self.reference,
         }
+    }
+}
+
+impl<T> AsRef<Ref<T>> for Root<T>
+where
+    T: Collectable,
+{
+    fn as_ref(&self) -> &Ref<T> {
+        &self.reference
     }
 }
 
@@ -1476,11 +1520,6 @@ where
 
     /// Loads a reference to the underlying data. Returns `None` if the data has
     /// been collected and is no longer available.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CollectionStarting` if `self` was created in another thread and
-    /// that thread is currently locked by the garbage collector.
     #[must_use]
     pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
         self.load_slot(guard).map(|allocated| &allocated.value)
@@ -1488,11 +1527,6 @@ where
 
     /// Loads a root reference to the underlying data. Returns `None` if the
     /// data has been collected and is no longer available.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CollectionStarting` if `self` was created in another thread and
-    /// that thread is currently locked by the garbage collector.
     #[must_use]
     pub fn as_root(&self, guard: &CollectionGuard) -> Option<Root<T>> {
         self.load_slot(guard).map(|allocated| {
@@ -1525,16 +1559,11 @@ impl<T> Copy for Ref<T> {}
 // SAFETY: Ref<T>'s usage of a pointer prevents auto implementation.
 // `Collectable` requires `Send`, and `Ref<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
-unsafe impl<T> Send for Ref<T> where T: Collectable {}
+unsafe impl<T> Send for Ref<T> where T: Send {}
 // SAFETY: Ref<T>'s usage of a pointer prevents auto implementation.
 // `Collectable` requires `Send`, and `Ref<T>` ensures proper Send + Sync
 // behavior in its memory accesses.
-unsafe impl<T> Sync for Ref<T> where T: Collectable {}
-
-/// A lock has been established by the collector on data needed to resolve a
-/// reference.
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct CollectionStarting;
+unsafe impl<T> Sync for Ref<T> where T: Sync {}
 
 #[derive(Default)]
 struct Bins {
@@ -1712,12 +1741,11 @@ where
                 let root_count =
                     unsafe { (*slot.value.get()).allocated.roots.load(Ordering::Relaxed) };
                 if root_count > 0 {
-                    tracer.mark::<T>(Ref {
-                        type_index: self.type_index,
+                    tracer.mark(AnyRef {
+                        type_id: self.type_index,
                         creating_thread: tracer.tracing_thread,
                         slot_generation,
                         bin_id: BinId::new(slab_index.cast::<u32>(), index.cast::<u8>()),
-                        _t: PhantomData,
                     });
                 }
             }
@@ -1827,7 +1855,7 @@ where
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct BinId(u32);
 
 impl BinId {
@@ -2195,7 +2223,7 @@ pub fn collect() {
     GlobalCollector::get().info.wait_for_collection(now);
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct TypeIndex(u32);
 
 impl TypeIndex {
@@ -2218,6 +2246,7 @@ impl TypeIndex {
 }
 
 /// A type-erased garbage collected reference.
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub struct AnyRef {
     type_id: TypeIndex,
     creating_thread: CollectorThreadId,
@@ -2258,6 +2287,16 @@ impl AnyRef {
         self.downcast_ref().and_then(|r| r.as_root(guard))
     }
 
+    /// Loads a reference to the underlying data. Returns `None` if the data has
+    /// been collected and is no longer available.
+    #[must_use]
+    pub fn load<'guard, T>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T>
+    where
+        T: Collectable,
+    {
+        self.downcast_ref().and_then(|r| r.load(guard))
+    }
+
     /// Returns a reference to the result of [`MapAs::map_as()`], if the value
     /// has not been collected and [`MapAs::Target`] is `T`.
     pub fn load_mapped<'guard, T>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T>
@@ -2295,5 +2334,46 @@ impl AnyRef {
             &**bins,
             guard,
         )
+    }
+}
+
+impl Trace for AnyRef {
+    const MAY_CONTAIN_REFERENCES: bool = true;
+
+    fn trace(&self, tracer: &mut Tracer) {
+        tracer.mark(self);
+    }
+}
+
+impl From<&'_ AnyRef> for AnyRef {
+    fn from(value: &'_ AnyRef) -> Self {
+        *value
+    }
+}
+
+impl<T> From<&'_ Ref<T>> for AnyRef
+where
+    T: Collectable,
+{
+    fn from(value: &'_ Ref<T>) -> Self {
+        value.as_any()
+    }
+}
+
+impl<T> From<Ref<T>> for AnyRef
+where
+    T: Collectable,
+{
+    fn from(value: Ref<T>) -> Self {
+        value.as_any()
+    }
+}
+
+impl<T> From<&'_ Root<T>> for AnyRef
+where
+    T: Collectable,
+{
+    fn from(value: &'_ Root<T>) -> Self {
+        value.as_any()
     }
 }

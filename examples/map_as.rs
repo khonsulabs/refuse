@@ -13,23 +13,15 @@
 //! [rustnomicon]:
 //!     https://doc.rust-lang.org/nomicon/exotic-sizes.html#dynamically-sized-types-dsts
 
-use refuse::{collected, AnyRef, CollectionGuard, ContainsNoRefs, MapAs, Ref};
+use refuse::{collected, AnyRef, CollectionGuard, MapAs, Ref, Trace};
 
 trait SomeTrait {
     fn do_something(&self);
 }
 
+#[derive(MapAs, Trace)]
+#[map_as(target = dyn SomeTrait, map = |this| this)]
 struct SomeType;
-
-impl MapAs for SomeType {
-    type Target = dyn SomeTrait;
-
-    fn map_as(&self) -> &Self::Target {
-        self
-    }
-}
-
-impl ContainsNoRefs for SomeType {}
 
 impl SomeTrait for SomeType {
     fn do_something(&self) {
@@ -37,14 +29,13 @@ impl SomeTrait for SomeType {
     }
 }
 
+#[collected]
 fn main() {
-    collected(|| {
-        let guard = CollectionGuard::acquire();
-        let gced: Ref<SomeType> = Ref::new(SomeType, &guard);
-        let type_erased: AnyRef = gced.as_any();
-        type_erased
-            .load_mapped::<dyn SomeTrait>(&guard)
-            .unwrap()
-            .do_something();
-    });
+    let guard = CollectionGuard::acquire();
+    let gced: Ref<SomeType> = Ref::new(SomeType, &guard);
+    let type_erased: AnyRef = gced.as_any();
+    type_erased
+        .load_mapped::<dyn SomeTrait>(&guard)
+        .unwrap()
+        .do_something();
 }

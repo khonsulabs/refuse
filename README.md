@@ -3,10 +3,11 @@
 An easy-to-use, incremental, multi-threaded garbage collector for Rust.
 
 ```rust
-use refuse::{CollectionGuard, Root, Ref};
+//! A basic usage example demonstrating the garbage collector.
+use refuse::{collected, CollectionGuard, Ref, Root};
 
-// Execute a closure with access to a garbage collector.
-refuse::collected(|| {
+#[collected]
+fn main() {
     let guard = CollectionGuard::acquire();
     // Allocate a vec![Ref(1), Ref(2), Ref(3)].
     let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &guard)).collect();
@@ -31,7 +32,7 @@ refuse::collected(|| {
     drop(values);
     guard.collect();
     assert_eq!(one.load(&guard), None);
-});
+}
 ```
 
 As the version number indicates, this crate is in early development. No semver

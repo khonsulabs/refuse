@@ -1,33 +1,33 @@
 //! A basic usage example demonstrating the garbage collector.
-use refuse::{CollectionGuard, Ref, Root};
+use refuse::{collected, CollectionGuard, Ref, Root};
 
 #[test]
+#[collected]
 fn basic() {
     // Execute a closure with access to a garbage collector.
-    refuse::collected(|| {
-        let guard = CollectionGuard::acquire();
-        // Allocate a vec![Ref(1), Ref(2), Ref(3)].
-        let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &guard)).collect();
-        let values = Root::new(values, &guard);
-        drop(guard);
 
-        // Manually execute the garbage collector. Our data will not be freed,
-        // since `values` is a "root" reference.
-        refuse::collect();
+    let guard = CollectionGuard::acquire();
+    // Allocate a vec![Ref(1), Ref(2), Ref(3)].
+    let values: Vec<Ref<u32>> = (1..=3).map(|value| Ref::new(value, &guard)).collect();
+    let values = Root::new(values, &guard);
+    drop(guard);
 
-        // Root references allow direct access to their data, even when a
-        // `CollectionGuard` isn't held.
-        let (one, two, three) = (values[0], values[1], values[2]);
+    // Manually execute the garbage collector. Our data will not be freed,
+    // since `values` is a "root" reference.
+    refuse::collect();
 
-        // Accessing the data contained in a `Ref` requires a guard, however.
-        let mut guard = CollectionGuard::acquire();
-        assert_eq!(one.load(&guard), Some(&1));
-        assert_eq!(two.load(&guard), Some(&2));
-        assert_eq!(three.load(&guard), Some(&3));
+    // Root references allow direct access to their data, even when a
+    // `CollectionGuard` isn't held.
+    let (one, two, three) = (values[0], values[1], values[2]);
 
-        // Dropping our root will allow the collector to free our `Ref`s.
-        drop(values);
-        guard.collect();
-        assert_eq!(one.load(&guard), None);
-    });
+    // Accessing the data contained in a `Ref` requires a guard, however.
+    let mut guard = CollectionGuard::acquire();
+    assert_eq!(one.load(&guard), Some(&1));
+    assert_eq!(two.load(&guard), Some(&2));
+    assert_eq!(three.load(&guard), Some(&3));
+
+    // Dropping our root will allow the collector to free our `Ref`s.
+    drop(values);
+    guard.collect();
+    assert_eq!(one.load(&guard), None);
 }
