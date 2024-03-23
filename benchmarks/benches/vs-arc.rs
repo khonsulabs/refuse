@@ -9,10 +9,10 @@ fn arc_string() -> Arc<[u8; 32]> {
     Arc::new([0; 32])
 }
 
-fn root_string(guard: &mut CollectionGuard) -> Root<[u8; 32]> {
+fn root_string(guard: &mut CollectionGuard<'_>) -> Root<[u8; 32]> {
     Root::new([0; 32], guard)
 }
-fn ref_string(guard: &mut CollectionGuard) -> Ref<[u8; 32]> {
+fn ref_string(guard: &mut CollectionGuard<'_>) -> Ref<[u8; 32]> {
     Ref::new([0; 32], guard)
 }
 

@@ -20,7 +20,7 @@ trait SomeTrait {
 }
 
 #[derive(MapAs, Trace)]
-#[map_as(target = dyn SomeTrait, map = |this| this)]
+#[map_as(target = dyn SomeTrait)]
 struct SomeType;
 
 impl SomeTrait for SomeType {

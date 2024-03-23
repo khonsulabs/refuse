@@ -24,7 +24,7 @@ clippy.pedantic = "warn"
 rust.missing_docs = "warn"
 
 [workspace]
-members = ["benchmarks", "refuse-macros"]
+members = ["benchmarks", "refuse-macros", "refuse-pool"]
 
 [profile.release]
 debug = true

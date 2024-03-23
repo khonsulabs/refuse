@@ -12,6 +12,7 @@ use std::num::{
     NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
 use std::ops::Deref;
+use std::rc::Rc;
 use std::sync::atomic::{
     self, AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
     AtomicU64, AtomicU8, AtomicUsize, Ordering,
@@ -578,7 +579,7 @@ impl GlobalCollector {
 static COLLECTOR: OnceLock<GlobalCollector> = OnceLock::new();
 
 thread_local! {
-    static THREAD_BINS: RefCell<OnceCell<ThreadLocalBins>> = RefCell::new(OnceCell::new());
+    static THREAD_POOL: RefCell<OnceCell<ThreadPool>> = RefCell::new(OnceCell::new());
 }
 
 #[derive(Default)]
@@ -606,20 +607,107 @@ impl Drop for UnsafeBins {
     }
 }
 
-#[derive(Clone)]
-struct ThreadLocalBins {
+#[derive(Default)]
+struct ThreadPool {
+    pool: LocalPool,
+    guard_depth: Rc<Cell<usize>>,
+}
+
+impl ThreadPool {
+    fn get() -> Self {
+        THREAD_POOL.with_borrow(|tp| tp.get().expect("not invoked from collected()").clone())
+    }
+
+    fn push_thread_guard() -> usize {
+        THREAD_POOL.with_borrow(|tp| tp.get().expect("not invoked from collected()").push_guard())
+    }
+
+    fn release_thread_guard() {
+        THREAD_POOL.with_borrow(|tp| {
+            tp.get()
+                .expect("not invoked from collected()")
+                .release_guard();
+        });
+    }
+
+    fn push_guard(&self) -> usize {
+        let depth = self.guard_depth.get();
+        self.guard_depth.set(depth + 1);
+        depth
+    }
+
+    fn release_guard(&self) {
+        self.guard_depth.set(self.guard_depth.get() - 1);
+    }
+}
+
+impl Clone for ThreadPool {
+    fn clone(&self) -> Self {
+        Self {
+            pool: LocalPool {
+                bins: self.pool.bins.clone(),
+                thread_id: self.pool.thread_id,
+                all_threads: self.pool.all_threads.clone(),
+            },
+            guard_depth: self.guard_depth.clone(),
+        }
+    }
+}
+
+/// A pool of garbage collected values.
+///
+/// Values from any pool can be read using any [`CollectionGuard`]. Using
+/// independent pools for specific types of data that are meant to be shared
+/// across many threads might be beneficial. However, an individual local pool
+/// will not be fully deallocated until all values allocated have been
+/// collected. Because of this, it may make sense to store some types in their
+/// own pool, ensuring their collection is independent of how the values are
+/// used amongst other threads.
+pub struct LocalPool {
     bins: Arc<UnsafeBins>,
     thread_id: CollectorThreadId,
     all_threads: AllThreadBins,
 }
 
-impl ThreadLocalBins {
-    fn get() -> Self {
-        THREAD_BINS.with_borrow(|bins| bins.get().expect("not invoked from collected()").clone())
+impl Default for LocalPool {
+    fn default() -> Self {
+        let all_threads = GlobalCollector::get().info.all_threads.clone();
+        let bins = Arc::<UnsafeBins>::default();
+        loop {
+            let thread_id = CollectorThreadId::unique();
+            let mut threads = all_threads.write();
+            if let kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
+                CollectorCommand::NewThread(thread_id, bins.clone()).send();
+                entry.insert(Arc::downgrade(&bins));
+                drop(threads);
+                return LocalPool {
+                    bins,
+                    thread_id,
+                    all_threads,
+                };
+            }
+        }
     }
 }
 
-impl Drop for ThreadLocalBins {
+impl LocalPool {
+    /// Acquires a collection guard for this pool.
+    #[must_use]
+    pub fn enter(&self) -> CollectionGuard<'_> {
+        let depth = ThreadPool::push_thread_guard();
+        let collector = if depth == 0 {
+            CollectorReadGuard::acquire()
+        } else {
+            CollectorReadGuard::acquire_recursive()
+        };
+        CollectionGuard {
+            collector,
+            thread: Guarded::Local(self),
+        }
+    }
+}
+
+impl Drop for LocalPool {
     fn drop(&mut self) {
         // If this reference and the one in the collector are the last
         // references, send a shutdown notice.
@@ -639,25 +727,8 @@ impl Drop for ThreadLocalBins {
 ///
 /// This function utilizes Rust's thread-local storage.
 pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
-    THREAD_BINS.with_borrow(|lock| {
-        lock.get_or_init(|| {
-            let all_threads = GlobalCollector::get().info.all_threads.clone();
-            let bins = Arc::<UnsafeBins>::default();
-            loop {
-                let thread_id = CollectorThreadId::unique();
-                let mut threads = all_threads.write();
-                if let kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
-                    CollectorCommand::NewThread(thread_id, bins.clone()).send();
-                    entry.insert(Arc::downgrade(&bins));
-                    drop(threads);
-                    return ThreadLocalBins {
-                        bins,
-                        thread_id,
-                        all_threads,
-                    };
-                }
-            }
-        });
+    THREAD_POOL.with_borrow(|lock| {
+        lock.get_or_init(ThreadPool::default);
         wrapped()
     })
 }
@@ -673,6 +744,10 @@ impl ReaderState {
                 (state & Self::COLLECTING_BIT == 0).then_some(state + 1)
             })
             .is_ok()
+    }
+
+    fn read_recursive(&self) {
+        self.0.fetch_add(1, Ordering::Acquire);
     }
 
     fn release_read(&self) -> bool {
@@ -736,12 +811,27 @@ impl CollectorReadGuard {
         this
     }
 
+    fn acquire_recursive() -> Self {
+        let this = Self {
+            global: &GlobalCollector::get().info,
+        };
+        this.global.reader_state.read_recursive();
+        this
+    }
+
     fn acquire_reader(&mut self) {
         if !self.global.reader_state.read() {
             let mut info_data = self.global.info.lock();
             while !self.global.reader_state.read() {
                 self.global.collection_sync.wait(&mut info_data);
             }
+        }
+    }
+
+    fn read_recursive(&self) -> Self {
+        self.global.reader_state.read_recursive();
+        Self {
+            global: self.global,
         }
     }
 
@@ -769,6 +859,22 @@ impl Drop for CollectorReadGuard {
     }
 }
 
+enum Guarded<'a> {
+    Local(&'a LocalPool),
+    Thread(ThreadPool),
+}
+
+impl Deref for Guarded<'_> {
+    type Target = LocalPool;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Local(value) => value,
+            Self::Thread(value) => &value.pool,
+        }
+    }
+}
+
 /// A guard that prevents garbage collection while held.
 ///
 /// To perform garbage collection, all threads must be paused to be traced. A
@@ -787,21 +893,12 @@ impl Drop for CollectorReadGuard {
 /// IO, reading from a channel, or any other operation that may pause the
 /// current thread. [`CollectionGuard::while_unlocked()`] can be used to
 /// temporarily release a guard during a long operation.
-pub struct CollectionGuard {
+pub struct CollectionGuard<'a> {
     collector: CollectorReadGuard,
-    thread: ThreadLocalBins,
+    thread: Guarded<'a>,
 }
 
-impl CollectionGuard {
-    #[allow(clippy::unused_self)]
-    fn bins_for<'a>(&'a self, bins: &'a UnsafeBins) -> &'a Bins {
-        unsafe { bins.assume_readable() }
-    }
-
-    fn bins(&self) -> &Bins {
-        self.bins_for(&self.thread.bins)
-    }
-
+impl CollectionGuard<'static> {
     /// Acquires a lock that prevents the garbage collector from running.
     ///
     /// This guard is used to provide read-only access to garbage collected
@@ -813,9 +910,40 @@ impl CollectionGuard {
     /// by [`collected()`].
     #[must_use]
     pub fn acquire() -> Self {
-        let collector = CollectorReadGuard::acquire();
-        let thread = ThreadLocalBins::get();
-        Self { collector, thread }
+        let thread = ThreadPool::get();
+
+        let depth = thread.push_guard();
+
+        let collector = if depth == 0 {
+            CollectorReadGuard::acquire()
+        } else {
+            CollectorReadGuard::acquire_recursive()
+        };
+        Self {
+            collector,
+            thread: Guarded::Thread(thread),
+        }
+    }
+}
+
+impl CollectionGuard<'_> {
+    #[allow(clippy::unused_self)]
+    fn bins_for<'a>(&'a self, bins: &'a UnsafeBins) -> &'a Bins {
+        unsafe { bins.assume_readable() }
+    }
+
+    fn bins(&self) -> &Bins {
+        self.bins_for(&self.thread.bins)
+    }
+
+    /// Returns a guard that allocates from `pool`.
+    #[must_use]
+    pub fn allocating_in<'a>(&self, pool: &'a LocalPool) -> CollectionGuard<'a> {
+        ThreadPool::push_thread_guard();
+        CollectionGuard {
+            collector: self.collector.read_recursive(),
+            thread: Guarded::Local(pool),
+        }
     }
 
     /// Manually invokes the garbage collector.
@@ -857,14 +985,20 @@ impl CollectionGuard {
     }
 }
 
-impl AsRef<CollectionGuard> for CollectionGuard {
-    fn as_ref(&self) -> &CollectionGuard {
+impl Drop for CollectionGuard<'_> {
+    fn drop(&mut self) {
+        ThreadPool::release_thread_guard();
+    }
+}
+
+impl<'a> AsRef<CollectionGuard<'a>> for CollectionGuard<'a> {
+    fn as_ref(&self) -> &CollectionGuard<'a> {
         self
     }
 }
 
-impl AsMut<CollectionGuard> for CollectionGuard {
-    fn as_mut(&mut self) -> &mut CollectionGuard {
+impl<'a> AsMut<CollectionGuard<'a>> for CollectionGuard<'a> {
+    fn as_mut(&mut self) -> &mut CollectionGuard<'a> {
         self
     }
 }
@@ -1292,7 +1426,7 @@ where
         type_index: TypeIndex,
         slot_generation: u32,
         bin_id: BinId,
-        guard: &CollectionGuard,
+        guard: &CollectionGuard<'_>,
     ) -> Self {
         // SAFETY: The guard is always present except during allocation which
         // never invokes this function. Since `bin_id` was just allocated, we
@@ -1312,10 +1446,17 @@ where
 
     /// Stores `value` in the garbage collector, returning a root reference to
     /// the data.
-    pub fn new(value: T, guard: impl AsRef<CollectionGuard>) -> Self {
+    pub fn new<'a>(value: T, guard: impl AsRef<CollectionGuard<'a>>) -> Self {
         let guard = guard.as_ref();
         let (type_index, gen, bin) = guard.adopt(Rooted::root(value));
         Self::from_parts(type_index, gen, bin, guard)
+    }
+
+    /// Returns the current number of root references to this value, including
+    /// `self`.
+    #[must_use]
+    pub fn root_count(&self) -> u64 {
+        self.as_rooted().roots.load(Ordering::Acquire)
     }
 
     /// Returns a "weak" reference to this root.
@@ -1343,6 +1484,13 @@ where
         // as this `Root<T>` is alive. This ensures at least one root will
         // remain in existence, preventing the count from reaching 0.
         unsafe { &(*self.data) }
+    }
+
+    /// Returns true if these two references point to the same underlying
+    /// allocation.
+    #[must_use]
+    pub fn ptr_eq(this: &Self, other: &Self) -> bool {
+        Ref::ptr_eq(&this.reference, &other.reference)
     }
 }
 
@@ -1466,7 +1614,7 @@ where
 {
     /// Stores `value` in the garbage collector, returning a "weak" reference to
     /// it.
-    pub fn new(value: T, guard: impl AsRef<CollectionGuard>) -> Self {
+    pub fn new<'a>(value: T, guard: impl AsRef<CollectionGuard<'a>>) -> Self {
         let guard = guard.as_ref();
         let (type_index, slot_generation, bin_id) = guard.adopt(Rooted::reference(value));
 
@@ -1493,7 +1641,7 @@ where
     fn load_slot_from<'guard>(
         &self,
         bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
-        guard: &'guard CollectionGuard,
+        guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard Rooted<T>> {
         bins.get(&self.type_index)?
             .as_any()
@@ -1502,7 +1650,7 @@ where
             .load(self.bin_id, self.slot_generation, guard)
     }
 
-    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard Rooted<T>> {
+    fn load_slot<'guard>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard Rooted<T>> {
         if guard.thread.thread_id == self.creating_thread {
             self.load_slot_from(&guard.bins().by_type.read(), guard)
         } else {
@@ -1521,14 +1669,14 @@ where
     /// Loads a reference to the underlying data. Returns `None` if the data has
     /// been collected and is no longer available.
     #[must_use]
-    pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T> {
+    pub fn load<'guard>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard T> {
         self.load_slot(guard).map(|allocated| &allocated.value)
     }
 
     /// Loads a root reference to the underlying data. Returns `None` if the
     /// data has been collected and is no longer available.
     #[must_use]
-    pub fn as_root(&self, guard: &CollectionGuard) -> Option<Root<T>> {
+    pub fn as_root(&self, guard: &CollectionGuard<'_>) -> Option<Root<T>> {
         self.load_slot(guard).map(|allocated| {
             allocated.roots.fetch_add(1, Ordering::Acquire);
             Root {
@@ -1598,7 +1746,7 @@ impl Bins {
         &*(*slot.value.get()).allocated
     }
 
-    fn adopt<T>(value: Rooted<T>, bins_guard: &CollectionGuard) -> (TypeIndex, u32, BinId)
+    fn adopt<T>(value: Rooted<T>, bins_guard: &CollectionGuard<'_>) -> (TypeIndex, u32, BinId)
     where
         T: Collectable,
     {
@@ -1702,7 +1850,7 @@ where
         &self,
         bin_id: BinId,
         slot_generation: u32,
-        _guard: &'guard CollectionGuard,
+        _guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard Rooted<T>> {
         let slab = self.slabs.get(bin_id.slab() as usize)?;
         let slot = &slab.slots[usize::from(bin_id.slot())];
@@ -1819,7 +1967,7 @@ where
         id: BinId,
         slot_generation: u32,
         bin: &dyn AnyBin,
-        guard: &'guard CollectionGuard,
+        guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard T>;
 }
 
@@ -1843,7 +1991,7 @@ where
         id: BinId,
         slot_generation: u32,
         bin: &dyn AnyBin,
-        guard: &'guard CollectionGuard,
+        guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard C::Target> {
         let ref_counted = bin
             .as_any()
@@ -2290,7 +2438,7 @@ impl AnyRef {
     /// Loads a reference to the underlying data. Returns `None` if the data has
     /// been collected and is no longer available.
     #[must_use]
-    pub fn load<'guard, T>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T>
+    pub fn load<'guard, T>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard T>
     where
         T: Collectable,
     {
@@ -2299,7 +2447,7 @@ impl AnyRef {
 
     /// Returns a reference to the result of [`MapAs::map_as()`], if the value
     /// has not been collected and [`MapAs::Target`] is `T`.
-    pub fn load_mapped<'guard, T>(&self, guard: &'guard CollectionGuard) -> Option<&'guard T>
+    pub fn load_mapped<'guard, T>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard T>
     where
         T: ?Sized + 'static,
     {
@@ -2321,7 +2469,7 @@ impl AnyRef {
     fn load_mapped_slot_from<'guard, T>(
         &self,
         bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
-        guard: &'guard CollectionGuard,
+        guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard T>
     where
         T: ?Sized + 'static,

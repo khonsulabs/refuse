@@ -10,7 +10,7 @@ proc-macro = true
 
 syn = "2.0.52"
 manyhow = "0.11.1"
-attribute-derive = "0.8.0"
+attribute-derive = { version = "0.9.1" }
 quote = "1.0.35"
 proc-macro2 = "1.0.79"
 

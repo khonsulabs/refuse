@@ -45,19 +45,19 @@ fn derive_map_as_inner(
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let attr = MapAsAttr::from_attributes(attrs)?;
 
-    match (&attr.map, &attr.target) {
-        (Some(map), map_as) => {
+    match (&attr.target, &attr.map) {
+        (Some(target), map_as) => {
             let map_as = if let Some(map_as) = map_as {
                 quote!(#map_as)
             } else {
-                quote!(|this| this)
+                quote!(self)
             };
             Ok(quote! {
                 impl<#impl_gen> refuse::MapAs for #ident<#type_gen> #where_clause {
-                    type Target = #map_as;
+                    type Target = #target;
 
                     fn map_as(&self) -> &Self::Target {
-                        (#map)(self)
+                        #map_as
                     }
                 }
             })
@@ -66,7 +66,7 @@ fn derive_map_as_inner(
             impl<#impl_gen> refuse::NoMapping for #ident<#type_gen> #where_clause {}
         }),
         (_, Some(map_as)) => {
-            manyhow::bail!(map_as, "map must be specified when map_as is provided")
+            manyhow::bail!(map_as, "target must be specified when map is provided")
         }
     }
 }
@@ -200,8 +200,8 @@ fn derive_enum_trace(
 }
 
 #[derive(FromAttr)]
-#[attribute(ident = collectable)]
+#[attribute(ident = map_as)]
 struct MapAsAttr {
     target: Option<syn::Type>,
-    map: Option<syn::ExprClosure>,
+    map: Option<syn::Expr>,
 }
