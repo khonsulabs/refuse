@@ -11,3 +11,6 @@ ahash = { version = "0.8.11", default-features = false, features = [
     "runtime-rng",
 ] }
 hashbrown = "0.14.3"
+
+[lints]
+rust.missing_docs = "warn"

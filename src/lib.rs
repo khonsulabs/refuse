@@ -5,6 +5,7 @@ use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
 use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::num::{
@@ -1385,7 +1386,7 @@ impl<'a> Tracer<'a> {
         self.mark_one_sender
             .send(MarkRequest {
                 thread: collectable.creating_thread,
-                type_index: collectable.type_id,
+                type_index: collectable.type_index,
                 slot_generation: collectable.slot_generation,
                 bin_id: collectable.bin_id,
                 mark_bits: self.mark_bit,
@@ -1435,10 +1436,13 @@ where
         Self {
             data,
             reference: Ref {
-                type_index,
-                creating_thread: guard.thread.thread_id,
-                slot_generation,
-                bin_id,
+                any: AnyRef {
+                    type_index,
+                    creating_thread: guard.thread.thread_id,
+                    slot_generation,
+                    bin_id,
+                },
+
                 _t: PhantomData,
             },
         }
@@ -1490,7 +1494,7 @@ where
     /// allocation.
     #[must_use]
     pub fn ptr_eq(this: &Self, other: &Self) -> bool {
-        Ref::ptr_eq(&this.reference, &other.reference)
+        this.reference == other.reference
     }
 }
 
@@ -1544,6 +1548,80 @@ where
         if self.as_rooted().roots.fetch_sub(1, Ordering::Acquire) == 1 {
             CollectorCommand::schedule_collect_if_needed();
         }
+    }
+}
+
+impl<T> Eq for Root<T> where T: Collectable + Eq {}
+
+impl<T> PartialEq for Root<T>
+where
+    T: Collectable + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.reference == other.reference || **self == **other
+    }
+}
+
+impl<T> PartialEq<Ref<T>> for Root<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &Ref<T>) -> bool {
+        self.reference == *other
+    }
+}
+
+impl<T> PartialEq<&'_ Ref<T>> for Root<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &&'_ Ref<T>) -> bool {
+        self == *other
+    }
+}
+
+impl<T> PartialEq<AnyRef> for Root<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &AnyRef) -> bool {
+        self.reference == *other
+    }
+}
+
+impl<T> PartialEq<&'_ AnyRef> for Root<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &&'_ AnyRef) -> bool {
+        self == *other
+    }
+}
+
+impl<T> Hash for Root<T>
+where
+    T: Collectable + Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (**self).hash(state)
+    }
+}
+
+impl<T> Ord for Root<T>
+where
+    T: Collectable + Ord,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (**self).cmp(&**other)
+    }
+}
+
+impl<T> PartialOrd for Root<T>
+where
+    T: Collectable + PartialOrd,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (**self).partial_cmp(&**other)
     }
 }
 
@@ -1601,10 +1679,7 @@ where
 /// assert_eq!(reference, &42);
 /// ```
 pub struct Ref<T> {
-    type_index: TypeIndex,
-    creating_thread: CollectorThreadId,
-    slot_generation: u32,
-    bin_id: BinId,
+    any: AnyRef,
     _t: PhantomData<fn(&T)>,
 }
 
@@ -1619,10 +1694,12 @@ where
         let (type_index, slot_generation, bin_id) = guard.adopt(Rooted::reference(value));
 
         Self {
-            type_index,
-            creating_thread: guard.thread.thread_id,
-            slot_generation,
-            bin_id,
+            any: AnyRef {
+                type_index,
+                creating_thread: guard.thread.thread_id,
+                slot_generation,
+                bin_id,
+            },
             _t: PhantomData,
         }
     }
@@ -1630,12 +1707,7 @@ where
     /// Returns this reference as an untyped reference.
     #[must_use]
     pub fn as_any(self) -> AnyRef {
-        AnyRef {
-            type_id: self.type_index,
-            creating_thread: self.creating_thread,
-            slot_generation: self.slot_generation,
-            bin_id: self.bin_id,
-        }
+        self.any
     }
 
     fn load_slot_from<'guard>(
@@ -1643,20 +1715,20 @@ where
         bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
         guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard Rooted<T>> {
-        bins.get(&self.type_index)?
+        bins.get(&self.any.type_index)?
             .as_any()
             .downcast_ref::<Bin<T>>()
             .assert("type mismatch")
-            .load(self.bin_id, self.slot_generation, guard)
+            .load(self.any.bin_id, self.any.slot_generation, guard)
     }
 
     fn load_slot<'guard>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard Rooted<T>> {
-        if guard.thread.thread_id == self.creating_thread {
+        if guard.thread.thread_id == self.any.creating_thread {
             self.load_slot_from(&guard.bins().by_type.read(), guard)
         } else {
             let all_threads = guard.thread.all_threads.read();
             let other_thread_bins = all_threads
-                .get(&self.creating_thread)
+                .get(&self.any.creating_thread)
                 .and_then(Weak::upgrade)?;
             let bins = guard.bins_for(&other_thread_bins);
 
@@ -1685,14 +1757,13 @@ where
             }
         })
     }
+}
 
-    /// Returns true if these two references point to the same underlying
-    /// allocation.
-    #[must_use]
-    pub fn ptr_eq(this: &Self, other: &Self) -> bool {
-        this.bin_id == other.bin_id
-            && this.creating_thread == other.creating_thread
-            && this.slot_generation == other.slot_generation
+impl<T> Eq for Ref<T> {}
+
+impl<T> PartialEq for Ref<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.any == other.any
     }
 }
 
@@ -1703,6 +1774,48 @@ impl<T> Clone for Ref<T> {
 }
 
 impl<T> Copy for Ref<T> {}
+
+impl<T> Hash for Ref<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.any.hash(state);
+    }
+}
+
+impl<T> PartialEq<Root<T>> for Ref<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &Root<T>) -> bool {
+        *self == other.reference
+    }
+}
+
+impl<T> PartialEq<&'_ Root<T>> for Ref<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &&'_ Root<T>) -> bool {
+        self == *other
+    }
+}
+
+impl<T> PartialEq<AnyRef> for Ref<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &AnyRef) -> bool {
+        self.any == *other
+    }
+}
+
+impl<T> PartialEq<&'_ AnyRef> for Ref<T>
+where
+    T: Collectable,
+{
+    fn eq(&self, other: &&'_ AnyRef) -> bool {
+        self == *other
+    }
+}
 
 // SAFETY: Ref<T>'s usage of a pointer prevents auto implementation.
 // `Collectable` requires `Send`, and `Ref<T>` ensures proper Send + Sync
@@ -1890,7 +2003,7 @@ where
                     unsafe { (*slot.value.get()).allocated.roots.load(Ordering::Relaxed) };
                 if root_count > 0 {
                     tracer.mark(AnyRef {
-                        type_id: self.type_index,
+                        type_index: self.type_index,
                         creating_thread: tracer.tracing_thread,
                         slot_generation,
                         bin_id: BinId::new(slab_index.cast::<u32>(), index.cast::<u8>()),
@@ -2394,9 +2507,9 @@ impl TypeIndex {
 }
 
 /// A type-erased garbage collected reference.
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct AnyRef {
-    type_id: TypeIndex,
+    type_index: TypeIndex,
     creating_thread: CollectorThreadId,
     slot_generation: u32,
     bin_id: BinId,
@@ -2414,13 +2527,10 @@ impl AnyRef {
             .type_indexes
             .read()
             .get(&TypeId::of::<T>())
-            == Some(&self.type_id);
+            == Some(&self.type_index);
 
         correct_type.then_some(Ref {
-            type_index: self.type_id,
-            creating_thread: self.creating_thread,
-            slot_generation: self.slot_generation,
-            bin_id: self.bin_id,
+            any: *self,
             _t: PhantomData,
         })
     }
@@ -2474,7 +2584,7 @@ impl AnyRef {
     where
         T: ?Sized + 'static,
     {
-        let bins = bins.get(&self.type_id)?;
+        let bins = bins.get(&self.type_index)?;
 
         bins.mapper().downcast_ref::<Mapper<T>>()?.0.load_mapped(
             self.bin_id,
@@ -2523,5 +2633,14 @@ where
 {
     fn from(value: &'_ Root<T>) -> Self {
         value.as_any()
+    }
+}
+
+impl Hash for AnyRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.type_index.hash(state);
+        self.creating_thread.hash(state);
+        self.slot_generation.hash(state);
+        self.bin_id.hash(state);
     }
 }
