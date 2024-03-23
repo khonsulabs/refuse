@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"refuse":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.StructuralPartialEq.html\" title=\"trait core::marker::StructuralPartialEq\">StructuralPartialEq</a> for <a class=\"struct\" href=\"refuse/struct.CollectionStarting.html\" title=\"struct refuse::CollectionStarting\">CollectionStarting</a>"]]
+"refuse":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.StructuralPartialEq.html\" title=\"trait core::marker::StructuralPartialEq\">StructuralPartialEq</a> for <a class=\"struct\" href=\"refuse/struct.AnyRef.html\" title=\"struct refuse::AnyRef\">AnyRef</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

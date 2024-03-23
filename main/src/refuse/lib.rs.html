@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (f4b771bf1 2024-03-14)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (85e449a32 2024-03-22)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -2299,6 +2299,353 @@
 <a href="#2297" id="2297">2297</a>
 <a href="#2298" id="2298">2298</a>
 <a href="#2299" id="2299">2299</a>
+<a href="#2300" id="2300">2300</a>
+<a href="#2301" id="2301">2301</a>
+<a href="#2302" id="2302">2302</a>
+<a href="#2303" id="2303">2303</a>
+<a href="#2304" id="2304">2304</a>
+<a href="#2305" id="2305">2305</a>
+<a href="#2306" id="2306">2306</a>
+<a href="#2307" id="2307">2307</a>
+<a href="#2308" id="2308">2308</a>
+<a href="#2309" id="2309">2309</a>
+<a href="#2310" id="2310">2310</a>
+<a href="#2311" id="2311">2311</a>
+<a href="#2312" id="2312">2312</a>
+<a href="#2313" id="2313">2313</a>
+<a href="#2314" id="2314">2314</a>
+<a href="#2315" id="2315">2315</a>
+<a href="#2316" id="2316">2316</a>
+<a href="#2317" id="2317">2317</a>
+<a href="#2318" id="2318">2318</a>
+<a href="#2319" id="2319">2319</a>
+<a href="#2320" id="2320">2320</a>
+<a href="#2321" id="2321">2321</a>
+<a href="#2322" id="2322">2322</a>
+<a href="#2323" id="2323">2323</a>
+<a href="#2324" id="2324">2324</a>
+<a href="#2325" id="2325">2325</a>
+<a href="#2326" id="2326">2326</a>
+<a href="#2327" id="2327">2327</a>
+<a href="#2328" id="2328">2328</a>
+<a href="#2329" id="2329">2329</a>
+<a href="#2330" id="2330">2330</a>
+<a href="#2331" id="2331">2331</a>
+<a href="#2332" id="2332">2332</a>
+<a href="#2333" id="2333">2333</a>
+<a href="#2334" id="2334">2334</a>
+<a href="#2335" id="2335">2335</a>
+<a href="#2336" id="2336">2336</a>
+<a href="#2337" id="2337">2337</a>
+<a href="#2338" id="2338">2338</a>
+<a href="#2339" id="2339">2339</a>
+<a href="#2340" id="2340">2340</a>
+<a href="#2341" id="2341">2341</a>
+<a href="#2342" id="2342">2342</a>
+<a href="#2343" id="2343">2343</a>
+<a href="#2344" id="2344">2344</a>
+<a href="#2345" id="2345">2345</a>
+<a href="#2346" id="2346">2346</a>
+<a href="#2347" id="2347">2347</a>
+<a href="#2348" id="2348">2348</a>
+<a href="#2349" id="2349">2349</a>
+<a href="#2350" id="2350">2350</a>
+<a href="#2351" id="2351">2351</a>
+<a href="#2352" id="2352">2352</a>
+<a href="#2353" id="2353">2353</a>
+<a href="#2354" id="2354">2354</a>
+<a href="#2355" id="2355">2355</a>
+<a href="#2356" id="2356">2356</a>
+<a href="#2357" id="2357">2357</a>
+<a href="#2358" id="2358">2358</a>
+<a href="#2359" id="2359">2359</a>
+<a href="#2360" id="2360">2360</a>
+<a href="#2361" id="2361">2361</a>
+<a href="#2362" id="2362">2362</a>
+<a href="#2363" id="2363">2363</a>
+<a href="#2364" id="2364">2364</a>
+<a href="#2365" id="2365">2365</a>
+<a href="#2366" id="2366">2366</a>
+<a href="#2367" id="2367">2367</a>
+<a href="#2368" id="2368">2368</a>
+<a href="#2369" id="2369">2369</a>
+<a href="#2370" id="2370">2370</a>
+<a href="#2371" id="2371">2371</a>
+<a href="#2372" id="2372">2372</a>
+<a href="#2373" id="2373">2373</a>
+<a href="#2374" id="2374">2374</a>
+<a href="#2375" id="2375">2375</a>
+<a href="#2376" id="2376">2376</a>
+<a href="#2377" id="2377">2377</a>
+<a href="#2378" id="2378">2378</a>
+<a href="#2379" id="2379">2379</a>
+<a href="#2380" id="2380">2380</a>
+<a href="#2381" id="2381">2381</a>
+<a href="#2382" id="2382">2382</a>
+<a href="#2383" id="2383">2383</a>
+<a href="#2384" id="2384">2384</a>
+<a href="#2385" id="2385">2385</a>
+<a href="#2386" id="2386">2386</a>
+<a href="#2387" id="2387">2387</a>
+<a href="#2388" id="2388">2388</a>
+<a href="#2389" id="2389">2389</a>
+<a href="#2390" id="2390">2390</a>
+<a href="#2391" id="2391">2391</a>
+<a href="#2392" id="2392">2392</a>
+<a href="#2393" id="2393">2393</a>
+<a href="#2394" id="2394">2394</a>
+<a href="#2395" id="2395">2395</a>
+<a href="#2396" id="2396">2396</a>
+<a href="#2397" id="2397">2397</a>
+<a href="#2398" id="2398">2398</a>
+<a href="#2399" id="2399">2399</a>
+<a href="#2400" id="2400">2400</a>
+<a href="#2401" id="2401">2401</a>
+<a href="#2402" id="2402">2402</a>
+<a href="#2403" id="2403">2403</a>
+<a href="#2404" id="2404">2404</a>
+<a href="#2405" id="2405">2405</a>
+<a href="#2406" id="2406">2406</a>
+<a href="#2407" id="2407">2407</a>
+<a href="#2408" id="2408">2408</a>
+<a href="#2409" id="2409">2409</a>
+<a href="#2410" id="2410">2410</a>
+<a href="#2411" id="2411">2411</a>
+<a href="#2412" id="2412">2412</a>
+<a href="#2413" id="2413">2413</a>
+<a href="#2414" id="2414">2414</a>
+<a href="#2415" id="2415">2415</a>
+<a href="#2416" id="2416">2416</a>
+<a href="#2417" id="2417">2417</a>
+<a href="#2418" id="2418">2418</a>
+<a href="#2419" id="2419">2419</a>
+<a href="#2420" id="2420">2420</a>
+<a href="#2421" id="2421">2421</a>
+<a href="#2422" id="2422">2422</a>
+<a href="#2423" id="2423">2423</a>
+<a href="#2424" id="2424">2424</a>
+<a href="#2425" id="2425">2425</a>
+<a href="#2426" id="2426">2426</a>
+<a href="#2427" id="2427">2427</a>
+<a href="#2428" id="2428">2428</a>
+<a href="#2429" id="2429">2429</a>
+<a href="#2430" id="2430">2430</a>
+<a href="#2431" id="2431">2431</a>
+<a href="#2432" id="2432">2432</a>
+<a href="#2433" id="2433">2433</a>
+<a href="#2434" id="2434">2434</a>
+<a href="#2435" id="2435">2435</a>
+<a href="#2436" id="2436">2436</a>
+<a href="#2437" id="2437">2437</a>
+<a href="#2438" id="2438">2438</a>
+<a href="#2439" id="2439">2439</a>
+<a href="#2440" id="2440">2440</a>
+<a href="#2441" id="2441">2441</a>
+<a href="#2442" id="2442">2442</a>
+<a href="#2443" id="2443">2443</a>
+<a href="#2444" id="2444">2444</a>
+<a href="#2445" id="2445">2445</a>
+<a href="#2446" id="2446">2446</a>
+<a href="#2447" id="2447">2447</a>
+<a href="#2448" id="2448">2448</a>
+<a href="#2449" id="2449">2449</a>
+<a href="#2450" id="2450">2450</a>
+<a href="#2451" id="2451">2451</a>
+<a href="#2452" id="2452">2452</a>
+<a href="#2453" id="2453">2453</a>
+<a href="#2454" id="2454">2454</a>
+<a href="#2455" id="2455">2455</a>
+<a href="#2456" id="2456">2456</a>
+<a href="#2457" id="2457">2457</a>
+<a href="#2458" id="2458">2458</a>
+<a href="#2459" id="2459">2459</a>
+<a href="#2460" id="2460">2460</a>
+<a href="#2461" id="2461">2461</a>
+<a href="#2462" id="2462">2462</a>
+<a href="#2463" id="2463">2463</a>
+<a href="#2464" id="2464">2464</a>
+<a href="#2465" id="2465">2465</a>
+<a href="#2466" id="2466">2466</a>
+<a href="#2467" id="2467">2467</a>
+<a href="#2468" id="2468">2468</a>
+<a href="#2469" id="2469">2469</a>
+<a href="#2470" id="2470">2470</a>
+<a href="#2471" id="2471">2471</a>
+<a href="#2472" id="2472">2472</a>
+<a href="#2473" id="2473">2473</a>
+<a href="#2474" id="2474">2474</a>
+<a href="#2475" id="2475">2475</a>
+<a href="#2476" id="2476">2476</a>
+<a href="#2477" id="2477">2477</a>
+<a href="#2478" id="2478">2478</a>
+<a href="#2479" id="2479">2479</a>
+<a href="#2480" id="2480">2480</a>
+<a href="#2481" id="2481">2481</a>
+<a href="#2482" id="2482">2482</a>
+<a href="#2483" id="2483">2483</a>
+<a href="#2484" id="2484">2484</a>
+<a href="#2485" id="2485">2485</a>
+<a href="#2486" id="2486">2486</a>
+<a href="#2487" id="2487">2487</a>
+<a href="#2488" id="2488">2488</a>
+<a href="#2489" id="2489">2489</a>
+<a href="#2490" id="2490">2490</a>
+<a href="#2491" id="2491">2491</a>
+<a href="#2492" id="2492">2492</a>
+<a href="#2493" id="2493">2493</a>
+<a href="#2494" id="2494">2494</a>
+<a href="#2495" id="2495">2495</a>
+<a href="#2496" id="2496">2496</a>
+<a href="#2497" id="2497">2497</a>
+<a href="#2498" id="2498">2498</a>
+<a href="#2499" id="2499">2499</a>
+<a href="#2500" id="2500">2500</a>
+<a href="#2501" id="2501">2501</a>
+<a href="#2502" id="2502">2502</a>
+<a href="#2503" id="2503">2503</a>
+<a href="#2504" id="2504">2504</a>
+<a href="#2505" id="2505">2505</a>
+<a href="#2506" id="2506">2506</a>
+<a href="#2507" id="2507">2507</a>
+<a href="#2508" id="2508">2508</a>
+<a href="#2509" id="2509">2509</a>
+<a href="#2510" id="2510">2510</a>
+<a href="#2511" id="2511">2511</a>
+<a href="#2512" id="2512">2512</a>
+<a href="#2513" id="2513">2513</a>
+<a href="#2514" id="2514">2514</a>
+<a href="#2515" id="2515">2515</a>
+<a href="#2516" id="2516">2516</a>
+<a href="#2517" id="2517">2517</a>
+<a href="#2518" id="2518">2518</a>
+<a href="#2519" id="2519">2519</a>
+<a href="#2520" id="2520">2520</a>
+<a href="#2521" id="2521">2521</a>
+<a href="#2522" id="2522">2522</a>
+<a href="#2523" id="2523">2523</a>
+<a href="#2524" id="2524">2524</a>
+<a href="#2525" id="2525">2525</a>
+<a href="#2526" id="2526">2526</a>
+<a href="#2527" id="2527">2527</a>
+<a href="#2528" id="2528">2528</a>
+<a href="#2529" id="2529">2529</a>
+<a href="#2530" id="2530">2530</a>
+<a href="#2531" id="2531">2531</a>
+<a href="#2532" id="2532">2532</a>
+<a href="#2533" id="2533">2533</a>
+<a href="#2534" id="2534">2534</a>
+<a href="#2535" id="2535">2535</a>
+<a href="#2536" id="2536">2536</a>
+<a href="#2537" id="2537">2537</a>
+<a href="#2538" id="2538">2538</a>
+<a href="#2539" id="2539">2539</a>
+<a href="#2540" id="2540">2540</a>
+<a href="#2541" id="2541">2541</a>
+<a href="#2542" id="2542">2542</a>
+<a href="#2543" id="2543">2543</a>
+<a href="#2544" id="2544">2544</a>
+<a href="#2545" id="2545">2545</a>
+<a href="#2546" id="2546">2546</a>
+<a href="#2547" id="2547">2547</a>
+<a href="#2548" id="2548">2548</a>
+<a href="#2549" id="2549">2549</a>
+<a href="#2550" id="2550">2550</a>
+<a href="#2551" id="2551">2551</a>
+<a href="#2552" id="2552">2552</a>
+<a href="#2553" id="2553">2553</a>
+<a href="#2554" id="2554">2554</a>
+<a href="#2555" id="2555">2555</a>
+<a href="#2556" id="2556">2556</a>
+<a href="#2557" id="2557">2557</a>
+<a href="#2558" id="2558">2558</a>
+<a href="#2559" id="2559">2559</a>
+<a href="#2560" id="2560">2560</a>
+<a href="#2561" id="2561">2561</a>
+<a href="#2562" id="2562">2562</a>
+<a href="#2563" id="2563">2563</a>
+<a href="#2564" id="2564">2564</a>
+<a href="#2565" id="2565">2565</a>
+<a href="#2566" id="2566">2566</a>
+<a href="#2567" id="2567">2567</a>
+<a href="#2568" id="2568">2568</a>
+<a href="#2569" id="2569">2569</a>
+<a href="#2570" id="2570">2570</a>
+<a href="#2571" id="2571">2571</a>
+<a href="#2572" id="2572">2572</a>
+<a href="#2573" id="2573">2573</a>
+<a href="#2574" id="2574">2574</a>
+<a href="#2575" id="2575">2575</a>
+<a href="#2576" id="2576">2576</a>
+<a href="#2577" id="2577">2577</a>
+<a href="#2578" id="2578">2578</a>
+<a href="#2579" id="2579">2579</a>
+<a href="#2580" id="2580">2580</a>
+<a href="#2581" id="2581">2581</a>
+<a href="#2582" id="2582">2582</a>
+<a href="#2583" id="2583">2583</a>
+<a href="#2584" id="2584">2584</a>
+<a href="#2585" id="2585">2585</a>
+<a href="#2586" id="2586">2586</a>
+<a href="#2587" id="2587">2587</a>
+<a href="#2588" id="2588">2588</a>
+<a href="#2589" id="2589">2589</a>
+<a href="#2590" id="2590">2590</a>
+<a href="#2591" id="2591">2591</a>
+<a href="#2592" id="2592">2592</a>
+<a href="#2593" id="2593">2593</a>
+<a href="#2594" id="2594">2594</a>
+<a href="#2595" id="2595">2595</a>
+<a href="#2596" id="2596">2596</a>
+<a href="#2597" id="2597">2597</a>
+<a href="#2598" id="2598">2598</a>
+<a href="#2599" id="2599">2599</a>
+<a href="#2600" id="2600">2600</a>
+<a href="#2601" id="2601">2601</a>
+<a href="#2602" id="2602">2602</a>
+<a href="#2603" id="2603">2603</a>
+<a href="#2604" id="2604">2604</a>
+<a href="#2605" id="2605">2605</a>
+<a href="#2606" id="2606">2606</a>
+<a href="#2607" id="2607">2607</a>
+<a href="#2608" id="2608">2608</a>
+<a href="#2609" id="2609">2609</a>
+<a href="#2610" id="2610">2610</a>
+<a href="#2611" id="2611">2611</a>
+<a href="#2612" id="2612">2612</a>
+<a href="#2613" id="2613">2613</a>
+<a href="#2614" id="2614">2614</a>
+<a href="#2615" id="2615">2615</a>
+<a href="#2616" id="2616">2616</a>
+<a href="#2617" id="2617">2617</a>
+<a href="#2618" id="2618">2618</a>
+<a href="#2619" id="2619">2619</a>
+<a href="#2620" id="2620">2620</a>
+<a href="#2621" id="2621">2621</a>
+<a href="#2622" id="2622">2622</a>
+<a href="#2623" id="2623">2623</a>
+<a href="#2624" id="2624">2624</a>
+<a href="#2625" id="2625">2625</a>
+<a href="#2626" id="2626">2626</a>
+<a href="#2627" id="2627">2627</a>
+<a href="#2628" id="2628">2628</a>
+<a href="#2629" id="2629">2629</a>
+<a href="#2630" id="2630">2630</a>
+<a href="#2631" id="2631">2631</a>
+<a href="#2632" id="2632">2632</a>
+<a href="#2633" id="2633">2633</a>
+<a href="#2634" id="2634">2634</a>
+<a href="#2635" id="2635">2635</a>
+<a href="#2636" id="2636">2636</a>
+<a href="#2637" id="2637">2637</a>
+<a href="#2638" id="2638">2638</a>
+<a href="#2639" id="2639">2639</a>
+<a href="#2640" id="2640">2640</a>
+<a href="#2641" id="2641">2641</a>
+<a href="#2642" id="2642">2642</a>
+<a href="#2643" id="2643">2643</a>
+<a href="#2644" id="2644">2644</a>
+<a href="#2645" id="2645">2645</a>
+<a href="#2646" id="2646">2646</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -2306,6 +2653,7 @@
 <span class="kw">use </span>std::any::{Any, TypeId};
 <span class="kw">use </span>std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 <span class="kw">use </span>std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
+<span class="kw">use </span>std::hash::Hash;
 <span class="kw">use </span>std::marker::PhantomData;
 <span class="kw">use </span>std::mem::ManuallyDrop;
 <span class="kw">use </span>std::num::{
@@ -2313,6 +2661,7 @@
     NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
 <span class="kw">use </span>std::ops::Deref;
+<span class="kw">use </span>std::rc::Rc;
 <span class="kw">use </span>std::sync::atomic::{
     <span class="self">self</span>, AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicU16, AtomicU32,
     AtomicU64, AtomicU8, AtomicUsize, Ordering,
@@ -2327,6 +2676,7 @@
 <span class="kw">use </span>kempt::map::Field;
 <span class="kw">use </span>kempt::{Map, Set};
 <span class="kw">use </span>parking_lot::{Condvar, Mutex, RwLock};
+<span class="kw">pub use </span>refuse_macros::{collected, MapAs, Trace};
 
 <span class="doccomment">/// Architecture overview of the underlying design of Refuse.
 ///
@@ -2878,7 +3228,7 @@
 <span class="kw">static </span>COLLECTOR: OnceLock&lt;GlobalCollector&gt; = OnceLock::new();
 
 <span class="macro">thread_local!</span> {
-    <span class="kw">static </span>THREAD_BINS: RefCell&lt;OnceCell&lt;ThreadLocalBins&gt;&gt; = RefCell::new(OnceCell::new());
+    <span class="kw">static </span>THREAD_POOL: RefCell&lt;OnceCell&lt;ThreadPool&gt;&gt; = RefCell::new(OnceCell::new());
 }
 
 <span class="attr">#[derive(Default)]
@@ -2906,20 +3256,107 @@
     }
 }
 
-<span class="attr">#[derive(Clone)]
-</span><span class="kw">struct </span>ThreadLocalBins {
+<span class="attr">#[derive(Default)]
+</span><span class="kw">struct </span>ThreadPool {
+    pool: LocalPool,
+    guard_depth: Rc&lt;Cell&lt;usize&gt;&gt;,
+}
+
+<span class="kw">impl </span>ThreadPool {
+    <span class="kw">fn </span>get() -&gt; <span class="self">Self </span>{
+        THREAD_POOL.with_borrow(|tp| tp.get().expect(<span class="string">"not invoked from collected()"</span>).clone())
+    }
+
+    <span class="kw">fn </span>push_thread_guard() -&gt; usize {
+        THREAD_POOL.with_borrow(|tp| tp.get().expect(<span class="string">"not invoked from collected()"</span>).push_guard())
+    }
+
+    <span class="kw">fn </span>release_thread_guard() {
+        THREAD_POOL.with_borrow(|tp| {
+            tp.get()
+                .expect(<span class="string">"not invoked from collected()"</span>)
+                .release_guard();
+        });
+    }
+
+    <span class="kw">fn </span>push_guard(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="kw">let </span>depth = <span class="self">self</span>.guard_depth.get();
+        <span class="self">self</span>.guard_depth.set(depth + <span class="number">1</span>);
+        depth
+    }
+
+    <span class="kw">fn </span>release_guard(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.guard_depth.set(<span class="self">self</span>.guard_depth.get() - <span class="number">1</span>);
+    }
+}
+
+<span class="kw">impl </span>Clone <span class="kw">for </span>ThreadPool {
+    <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            pool: LocalPool {
+                bins: <span class="self">self</span>.pool.bins.clone(),
+                thread_id: <span class="self">self</span>.pool.thread_id,
+                all_threads: <span class="self">self</span>.pool.all_threads.clone(),
+            },
+            guard_depth: <span class="self">self</span>.guard_depth.clone(),
+        }
+    }
+}
+
+<span class="doccomment">/// A pool of garbage collected values.
+///
+/// Values from any pool can be read using any [`CollectionGuard`]. Using
+/// independent pools for specific types of data that are meant to be shared
+/// across many threads might be beneficial. However, an individual local pool
+/// will not be fully deallocated until all values allocated have been
+/// collected. Because of this, it may make sense to store some types in their
+/// own pool, ensuring their collection is independent of how the values are
+/// used amongst other threads.
+</span><span class="kw">pub struct </span>LocalPool {
     bins: Arc&lt;UnsafeBins&gt;,
     thread_id: CollectorThreadId,
     all_threads: AllThreadBins,
 }
 
-<span class="kw">impl </span>ThreadLocalBins {
-    <span class="kw">fn </span>get() -&gt; <span class="self">Self </span>{
-        THREAD_BINS.with_borrow(|bins| bins.get().expect(<span class="string">"not invoked from collected()"</span>).clone())
+<span class="kw">impl </span>Default <span class="kw">for </span>LocalPool {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>all_threads = GlobalCollector::get().info.all_threads.clone();
+        <span class="kw">let </span>bins = Arc::&lt;UnsafeBins&gt;::default();
+        <span class="kw">loop </span>{
+            <span class="kw">let </span>thread_id = CollectorThreadId::unique();
+            <span class="kw">let </span><span class="kw-2">mut </span>threads = all_threads.write();
+            <span class="kw">if let </span>kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
+                CollectorCommand::NewThread(thread_id, bins.clone()).send();
+                entry.insert(Arc::downgrade(<span class="kw-2">&amp;</span>bins));
+                drop(threads);
+                <span class="kw">return </span>LocalPool {
+                    bins,
+                    thread_id,
+                    all_threads,
+                };
+            }
+        }
     }
 }
 
-<span class="kw">impl </span>Drop <span class="kw">for </span>ThreadLocalBins {
+<span class="kw">impl </span>LocalPool {
+    <span class="doccomment">/// Acquires a collection guard for this pool.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>enter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; CollectionGuard&lt;<span class="lifetime">'_</span>&gt; {
+        <span class="kw">let </span>depth = ThreadPool::push_thread_guard();
+        <span class="kw">let </span>collector = <span class="kw">if </span>depth == <span class="number">0 </span>{
+            CollectorReadGuard::acquire()
+        } <span class="kw">else </span>{
+            CollectorReadGuard::acquire_recursive()
+        };
+        CollectionGuard {
+            collector,
+            thread: Guarded::Local(<span class="self">self</span>),
+        }
+    }
+}
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>LocalPool {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="comment">// If this reference and the one in the collector are the last
         // references, send a shutdown notice.
@@ -2939,25 +3376,8 @@
 ///
 /// This function utilizes Rust's thread-local storage.
 </span><span class="kw">pub fn </span>collected&lt;R&gt;(wrapped: <span class="kw">impl </span>FnOnce() -&gt; R) -&gt; R {
-    THREAD_BINS.with_borrow(|lock| {
-        lock.get_or_init(|| {
-            <span class="kw">let </span>all_threads = GlobalCollector::get().info.all_threads.clone();
-            <span class="kw">let </span>bins = Arc::&lt;UnsafeBins&gt;::default();
-            <span class="kw">loop </span>{
-                <span class="kw">let </span>thread_id = CollectorThreadId::unique();
-                <span class="kw">let </span><span class="kw-2">mut </span>threads = all_threads.write();
-                <span class="kw">if let </span>kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
-                    CollectorCommand::NewThread(thread_id, bins.clone()).send();
-                    entry.insert(Arc::downgrade(<span class="kw-2">&amp;</span>bins));
-                    drop(threads);
-                    <span class="kw">return </span>ThreadLocalBins {
-                        bins,
-                        thread_id,
-                        all_threads,
-                    };
-                }
-            }
-        });
+    THREAD_POOL.with_borrow(|lock| {
+        lock.get_or_init(ThreadPool::default);
         wrapped()
     })
 }
@@ -2973,6 +3393,10 @@
                 (state &amp; <span class="self">Self</span>::COLLECTING_BIT == <span class="number">0</span>).then_some(state + <span class="number">1</span>)
             })
             .is_ok()
+    }
+
+    <span class="kw">fn </span>read_recursive(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.fetch_add(<span class="number">1</span>, Ordering::Acquire);
     }
 
     <span class="kw">fn </span>release_read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -3036,12 +3460,27 @@
         this
     }
 
+    <span class="kw">fn </span>acquire_recursive() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>this = <span class="self">Self </span>{
+            global: <span class="kw-2">&amp;</span>GlobalCollector::get().info,
+        };
+        this.global.reader_state.read_recursive();
+        this
+    }
+
     <span class="kw">fn </span>acquire_reader(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span>!<span class="self">self</span>.global.reader_state.read() {
             <span class="kw">let </span><span class="kw-2">mut </span>info_data = <span class="self">self</span>.global.info.lock();
             <span class="kw">while </span>!<span class="self">self</span>.global.reader_state.read() {
                 <span class="self">self</span>.global.collection_sync.wait(<span class="kw-2">&amp;mut </span>info_data);
             }
+        }
+    }
+
+    <span class="kw">fn </span>read_recursive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.global.reader_state.read_recursive();
+        <span class="self">Self </span>{
+            global: <span class="self">self</span>.global,
         }
     }
 
@@ -3069,6 +3508,22 @@
     }
 }
 
+<span class="kw">enum </span>Guarded&lt;<span class="lifetime">'a</span>&gt; {
+    Local(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>LocalPool),
+    Thread(ThreadPool),
+}
+
+<span class="kw">impl </span>Deref <span class="kw">for </span>Guarded&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">type </span>Target = LocalPool;
+
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Local(value) =&gt; value,
+            <span class="self">Self</span>::Thread(value) =&gt; <span class="kw-2">&amp;</span>value.pool,
+        }
+    }
+}
+
 <span class="doccomment">/// A guard that prevents garbage collection while held.
 ///
 /// To perform garbage collection, all threads must be paused to be traced. A
@@ -3087,21 +3542,12 @@
 /// IO, reading from a channel, or any other operation that may pause the
 /// current thread. [`CollectionGuard::while_unlocked()`] can be used to
 /// temporarily release a guard during a long operation.
-</span><span class="kw">pub struct </span>CollectionGuard {
+</span><span class="kw">pub struct </span>CollectionGuard&lt;<span class="lifetime">'a</span>&gt; {
     collector: CollectorReadGuard,
-    thread: ThreadLocalBins,
+    thread: Guarded&lt;<span class="lifetime">'a</span>&gt;,
 }
 
-<span class="kw">impl </span>CollectionGuard {
-    <span class="attr">#[allow(clippy::unused_self)]
-    </span><span class="kw">fn </span>bins_for&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bins: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>UnsafeBins) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Bins {
-        <span class="kw">unsafe </span>{ bins.assume_readable() }
-    }
-
-    <span class="kw">fn </span>bins(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
-        <span class="self">self</span>.bins_for(<span class="kw-2">&amp;</span><span class="self">self</span>.thread.bins)
-    }
-
+<span class="kw">impl </span>CollectionGuard&lt;<span class="lifetime">'static</span>&gt; {
     <span class="doccomment">/// Acquires a lock that prevents the garbage collector from running.
     ///
     /// This guard is used to provide read-only access to garbage collected
@@ -3113,9 +3559,40 @@
     /// by [`collected()`].
     </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>acquire() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>collector = CollectorReadGuard::acquire();
-        <span class="kw">let </span>thread = ThreadLocalBins::get();
-        <span class="self">Self </span>{ collector, thread }
+        <span class="kw">let </span>thread = ThreadPool::get();
+
+        <span class="kw">let </span>depth = thread.push_guard();
+
+        <span class="kw">let </span>collector = <span class="kw">if </span>depth == <span class="number">0 </span>{
+            CollectorReadGuard::acquire()
+        } <span class="kw">else </span>{
+            CollectorReadGuard::acquire_recursive()
+        };
+        <span class="self">Self </span>{
+            collector,
+            thread: Guarded::Thread(thread),
+        }
+    }
+}
+
+<span class="kw">impl </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="attr">#[allow(clippy::unused_self)]
+    </span><span class="kw">fn </span>bins_for&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bins: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>UnsafeBins) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Bins {
+        <span class="kw">unsafe </span>{ bins.assume_readable() }
+    }
+
+    <span class="kw">fn </span>bins(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
+        <span class="self">self</span>.bins_for(<span class="kw-2">&amp;</span><span class="self">self</span>.thread.bins)
+    }
+
+    <span class="doccomment">/// Returns a guard that allocates from `pool`.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>allocating_in&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, pool: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>LocalPool) -&gt; CollectionGuard&lt;<span class="lifetime">'a</span>&gt; {
+        ThreadPool::push_thread_guard();
+        CollectionGuard {
+            collector: <span class="self">self</span>.collector.read_recursive(),
+            thread: Guarded::Local(pool),
+        }
     }
 
     <span class="doccomment">/// Manually invokes the garbage collector.
@@ -3157,14 +3634,20 @@
     }
 }
 
-<span class="kw">impl </span>AsRef&lt;CollectionGuard&gt; <span class="kw">for </span>CollectionGuard {
-    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CollectionGuard {
+<span class="kw">impl </span>Drop <span class="kw">for </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt; {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        ThreadPool::release_thread_guard();
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt; <span class="kw">for </span>CollectionGuard&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'a</span>&gt; {
         <span class="self">self
     </span>}
 }
 
-<span class="kw">impl </span>AsMut&lt;CollectionGuard&gt; <span class="kw">for </span>CollectionGuard {
-    <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>CollectionGuard {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; AsMut&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt; <span class="kw">for </span>CollectionGuard&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>CollectionGuard&lt;<span class="lifetime">'a</span>&gt; {
         <span class="self">self
     </span>}
 }
@@ -3187,7 +3670,7 @@
 <span class="kw">impl</span>&lt;T&gt; Collectable <span class="kw">for </span>T <span class="kw">where </span>T: Trace + MapAs + Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="doccomment">/// A type that can find and mark any references it has.
-</span><span class="kw">pub trait </span>Trace {
+</span><span class="kw">pub trait </span>Trace: Send + Sync + <span class="lifetime">'static </span>{
     <span class="doccomment">/// If true, this type may contain references and should have its `trace()`
     /// function invoked during the collector's "mark" phase.
     </span><span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool;
@@ -3207,7 +3690,7 @@
 /// loading of a secondary type.
 ///
 /// If no mapping is desired, implement [`NoMapping`] instead.
-</span><span class="kw">pub trait </span>MapAs {
+</span><span class="kw">pub trait </span>MapAs: Send + Sync + <span class="lifetime">'static </span>{
     <span class="doccomment">/// The target type of the mapping.
     </span><span class="kw">type </span>Target: <span class="question-mark">?</span>Sized + <span class="lifetime">'static</span>;
 
@@ -3220,7 +3703,7 @@
 /// Types that implement this trait automatically implement [`Collectable`].
 /// This trait reduces the boilerplate for implementing [`Collectable`] for
 /// self-contained types.
-</span><span class="kw">pub trait </span>ContainsNoRefs {}
+</span><span class="kw">pub trait </span>ContainsNoRefs: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; Trace <span class="kw">for </span>T
 <span class="kw">where
@@ -3232,7 +3715,7 @@
 }
 
 <span class="doccomment">/// A type that implements [`MapAs`] with an empty implementation.
-</span><span class="kw">pub trait </span>NoMapping {}
+</span><span class="kw">pub trait </span>NoMapping: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; MapAs <span class="kw">for </span>T
 <span class="kw">where
@@ -3250,7 +3733,7 @@
 ///
 /// Implementing this trait for a type automatically implements [`NoMapping`]
 /// and [`ContainsNoRefs`], which makes the type [`Collectable`].
-</span><span class="kw">pub trait </span>SimpleType {}
+</span><span class="kw">pub trait </span>SimpleType: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>T <span class="kw">where </span>T: SimpleType {}
 <span class="kw">impl</span>&lt;T&gt; ContainsNoRefs <span class="kw">for </span>T <span class="kw">where </span>T: SimpleType {}
@@ -3296,6 +3779,7 @@
     NonZeroI64,
     NonZeroI128,
     NonZeroIsize,
+    String,
 );
 
 <span class="kw">impl</span>&lt;T&gt; Trace <span class="kw">for </span>Vec&lt;T&gt;
@@ -3311,7 +3795,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>Vec&lt;T&gt; {}
+<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>Vec&lt;T&gt; <span class="kw">where </span>T: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; Trace <span class="kw">for </span>VecDeque&lt;T&gt;
 <span class="kw">where
@@ -3326,7 +3810,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>VecDeque&lt;T&gt; {}
+<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>VecDeque&lt;T&gt; <span class="kw">where </span>T: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; Trace <span class="kw">for </span>BinaryHeap&lt;T&gt;
 <span class="kw">where
@@ -3341,7 +3825,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>BinaryHeap&lt;T&gt; {}
+<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>BinaryHeap&lt;T&gt; <span class="kw">where </span>T: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; Trace <span class="kw">for </span>LinkedList&lt;T&gt;
 <span class="kw">where
@@ -3356,12 +3840,13 @@
     }
 }
 
-<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>LinkedList&lt;T&gt; {}
+<span class="kw">impl</span>&lt;T&gt; NoMapping <span class="kw">for </span>LinkedList&lt;T&gt; <span class="kw">where </span>T: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;K, V, S&gt; Trace <span class="kw">for </span>HashMap&lt;K, V, S&gt;
 <span class="kw">where
     </span>K: Trace,
     V: Trace,
+    S: Send + Sync + <span class="lifetime">'static</span>,
 {
     <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES || V::MAY_CONTAIN_REFERENCES;
 
@@ -3373,11 +3858,18 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K, V, S&gt; NoMapping <span class="kw">for </span>HashMap&lt;K, V, S&gt; {}
+<span class="kw">impl</span>&lt;K, V, S&gt; NoMapping <span class="kw">for </span>HashMap&lt;K, V, S&gt;
+<span class="kw">where
+    </span>K: Send + Sync + <span class="lifetime">'static</span>,
+    V: Send + Sync + <span class="lifetime">'static</span>,
+    S: Send + Sync + <span class="lifetime">'static</span>,
+{
+}
 
 <span class="kw">impl</span>&lt;K, S&gt; Trace <span class="kw">for </span>HashSet&lt;K, S&gt;
 <span class="kw">where
     </span>K: Trace,
+    S: Send + Sync + <span class="lifetime">'static</span>,
 {
     <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = K::MAY_CONTAIN_REFERENCES;
 
@@ -3388,7 +3880,12 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K, S&gt; NoMapping <span class="kw">for </span>HashSet&lt;K, S&gt; {}
+<span class="kw">impl</span>&lt;K, S&gt; NoMapping <span class="kw">for </span>HashSet&lt;K, S&gt;
+<span class="kw">where
+    </span>K: Send + Sync + <span class="lifetime">'static</span>,
+    S: Send + Sync + <span class="lifetime">'static</span>,
+{
+}
 
 <span class="kw">impl</span>&lt;K, V&gt; Trace <span class="kw">for </span>BTreeMap&lt;K, V&gt;
 <span class="kw">where
@@ -3405,7 +3902,12 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K, V&gt; NoMapping <span class="kw">for </span>BTreeMap&lt;K, V&gt; {}
+<span class="kw">impl</span>&lt;K, V&gt; NoMapping <span class="kw">for </span>BTreeMap&lt;K, V&gt;
+<span class="kw">where
+    </span>K: Send + Sync + <span class="lifetime">'static</span>,
+    V: Send + Sync + <span class="lifetime">'static</span>,
+{
+}
 
 <span class="kw">impl</span>&lt;K&gt; Trace <span class="kw">for </span>BTreeSet&lt;K&gt;
 <span class="kw">where
@@ -3420,7 +3922,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K&gt; NoMapping <span class="kw">for </span>BTreeSet&lt;K&gt; {}
+<span class="kw">impl</span>&lt;K&gt; NoMapping <span class="kw">for </span>BTreeSet&lt;K&gt; <span class="kw">where </span>K: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;K, V&gt; Trace <span class="kw">for </span>Map&lt;K, V&gt;
 <span class="kw">where
@@ -3437,7 +3939,12 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K, V&gt; NoMapping <span class="kw">for </span>Map&lt;K, V&gt; <span class="kw">where </span>K: kempt::Sort {}
+<span class="kw">impl</span>&lt;K, V&gt; NoMapping <span class="kw">for </span>Map&lt;K, V&gt;
+<span class="kw">where
+    </span>K: kempt::Sort + Send + Sync + <span class="lifetime">'static</span>,
+    V: Send + Sync + <span class="lifetime">'static</span>,
+{
+}
 
 <span class="kw">impl</span>&lt;K&gt; Trace <span class="kw">for </span>Set&lt;K&gt;
 <span class="kw">where
@@ -3452,7 +3959,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;K&gt; NoMapping <span class="kw">for </span>Set&lt;K&gt; <span class="kw">where </span>K: kempt::Sort {}
+<span class="kw">impl</span>&lt;K&gt; NoMapping <span class="kw">for </span>Set&lt;K&gt; <span class="kw">where </span>K: kempt::Sort + Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T, <span class="kw">const </span>N: usize&gt; Trace <span class="kw">for </span>[T; N]
 <span class="kw">where
@@ -3466,13 +3973,13 @@
         }
     }
 }
-<span class="kw">impl</span>&lt;T, <span class="kw">const </span>N: usize&gt; NoMapping <span class="kw">for </span>[T; N] {}
+<span class="kw">impl</span>&lt;T, <span class="kw">const </span>N: usize&gt; NoMapping <span class="kw">for </span>[T; N] <span class="kw">where </span>T: Send + Sync + <span class="lifetime">'static </span>{}
 
 <span class="kw">impl</span>&lt;T&gt; Trace <span class="kw">for </span>Root&lt;T&gt;
 <span class="kw">where
     </span>T: Collectable,
 {
-    <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = T::MAY_CONTAIN_REFERENCES;
+    <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = <span class="bool-val">false</span>;
 
     <span class="kw">fn </span>trace(<span class="kw-2">&amp;</span><span class="self">self</span>, _tracer: <span class="kw-2">&amp;mut </span>Tracer) {
         <span class="comment">// Root&lt;T&gt; is already a root, thus calling trace on a Root&lt;T&gt; has no
@@ -3489,6 +3996,12 @@
     <span class="kw">fn </span>trace(<span class="kw-2">&amp;</span><span class="self">self</span>, tracer: <span class="kw-2">&amp;mut </span>Tracer) {
         tracer.mark(<span class="kw-2">*</span><span class="self">self</span>);
     }
+}
+
+<span class="kw">impl</span>&lt;T&gt; AsRef&lt;Ref&lt;T&gt;&gt; <span class="kw">for </span>Ref&lt;T&gt; {
+    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Ref&lt;T&gt; {
+        <span class="self">self
+    </span>}
 }
 
 <span class="doccomment">/// A tracer for the garbage collector.
@@ -3516,10 +4029,8 @@
 
     <span class="doccomment">/// Marks `collectable` as being referenced, ensuring it is not garbage
     /// collected.
-    </span><span class="kw">pub fn </span>mark&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, collectable: Ref&lt;T&gt;)
-    <span class="kw">where
-        </span>T: Collectable,
-    {
+    </span><span class="kw">pub fn </span>mark(<span class="kw-2">&amp;mut </span><span class="self">self</span>, collectable: <span class="kw">impl </span>Into&lt;AnyRef&gt;) {
+        <span class="kw">let </span>collectable = collectable.into();
         <span class="self">self</span>.mark_one_sender
             .send(MarkRequest {
                 thread: collectable.creating_thread,
@@ -3533,7 +4044,7 @@
     }
 }
 
-<span class="attr">#[test]
+<span class="attr">#[std::prelude::v1::test]
 </span><span class="kw">fn </span>size_of_types() {
     <span class="macro">assert_eq!</span>(std::mem::size_of::&lt;Root&lt;u32&gt;&gt;(), <span class="number">24</span>);
     <span class="macro">assert_eq!</span>(std::mem::size_of::&lt;Ref&lt;u32&gt;&gt;(), <span class="number">16</span>);
@@ -3564,7 +4075,7 @@
         type_index: TypeIndex,
         slot_generation: u32,
         bin_id: BinId,
-        guard: <span class="kw-2">&amp;</span>CollectionGuard,
+        guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="comment">// SAFETY: The guard is always present except during allocation which
         // never invokes this function. Since `bin_id` was just allocated, we
@@ -3573,10 +4084,13 @@
         <span class="self">Self </span>{
             data,
             reference: Ref {
-                type_index,
-                creating_thread: guard.thread.thread_id,
-                slot_generation,
-                bin_id,
+                any: AnyRef {
+                    type_index,
+                    creating_thread: guard.thread.thread_id,
+                    slot_generation,
+                    bin_id,
+                },
+
                 _t: PhantomData,
             },
         }
@@ -3584,10 +4098,17 @@
 
     <span class="doccomment">/// Stores `value` in the garbage collector, returning a root reference to
     /// the data.
-    </span><span class="kw">pub fn </span>new(value: T, guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'a</span>&gt;(value: T, guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>guard = guard.as_ref();
         <span class="kw">let </span>(type_index, gen, bin) = guard.adopt(Rooted::root(value));
         <span class="self">Self</span>::from_parts(type_index, gen, bin, guard)
+    }
+
+    <span class="doccomment">/// Returns the current number of root references to this value, including
+    /// `self`.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>root_count(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="self">self</span>.as_rooted().roots.load(Ordering::Acquire)
     }
 
     <span class="doccomment">/// Returns a "weak" reference to this root.
@@ -3602,6 +4123,12 @@
         <span class="self">self</span>.reference.as_any()
     }
 
+    <span class="doccomment">/// Returns this reference as an untyped reference.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AnyRef {
+        <span class="self">self</span>.reference.as_any()
+    }
+
     <span class="kw">fn </span>as_rooted(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Rooted&lt;T&gt; {
         <span class="comment">// SAFETY: The garbage collector will not collect data while we have a
         // non-zero root count. The returned lifetime of the data is tied to
@@ -3609,6 +4136,13 @@
         // as this `Root&lt;T&gt;` is alive. This ensures at least one root will
         // remain in existence, preventing the count from reaching 0.
         </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="self">self</span>.data) }
+    }
+
+    <span class="doccomment">/// Returns true if these two references point to the same underlying
+    /// allocation.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>ptr_eq(this: <span class="kw-2">&amp;</span><span class="self">Self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        this.reference == other.reference
     }
 }
 
@@ -3622,6 +4156,15 @@
             data: <span class="self">self</span>.data,
             reference: <span class="self">self</span>.reference,
         }
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; AsRef&lt;Ref&lt;T&gt;&gt; <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Ref&lt;T&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.reference
     }
 }
 
@@ -3653,6 +4196,80 @@
         <span class="kw">if </span><span class="self">self</span>.as_rooted().roots.fetch_sub(<span class="number">1</span>, Ordering::Acquire) == <span class="number">1 </span>{
             CollectorCommand::schedule_collect_if_needed();
         }
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; Eq <span class="kw">for </span>Root&lt;T&gt; <span class="kw">where </span>T: Collectable + Eq {}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable + PartialEq,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.reference == other.reference || <span class="kw-2">**</span><span class="self">self </span>== <span class="kw-2">**</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;Ref&lt;T&gt;&gt; <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Ref&lt;T&gt;) -&gt; bool {
+        <span class="self">self</span>.reference == <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>Ref&lt;T&gt;&gt; <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: &amp;&amp;<span class="lifetime">'_ </span>Ref&lt;T&gt;) -&gt; bool {
+        <span class="self">self </span>== <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;AnyRef&gt; <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>AnyRef) -&gt; bool {
+        <span class="self">self</span>.reference == <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>AnyRef&gt; <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: &amp;&amp;<span class="lifetime">'_ </span>AnyRef) -&gt; bool {
+        <span class="self">self </span>== <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; Hash <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable + Hash,
+{
+    <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
+        (<span class="kw-2">**</span><span class="self">self</span>).hash(state)
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; Ord <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable + Ord,
+{
+    <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; std::cmp::Ordering {
+        (<span class="kw-2">**</span><span class="self">self</span>).cmp(<span class="kw-2">&amp;**</span>other)
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialOrd <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable + PartialOrd,
+{
+    <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;std::cmp::Ordering&gt; {
+        (<span class="kw-2">**</span><span class="self">self</span>).partial_cmp(<span class="kw-2">&amp;**</span>other)
     }
 }
 
@@ -3710,10 +4327,7 @@
 /// assert_eq!(reference, &amp;42);
 /// ```
 </span><span class="kw">pub struct </span>Ref&lt;T&gt; {
-    type_index: TypeIndex,
-    creating_thread: CollectorThreadId,
-    slot_generation: u32,
-    bin_id: BinId,
+    any: AnyRef,
     _t: PhantomData&lt;<span class="kw">fn</span>(<span class="kw-2">&amp;</span>T)&gt;,
 }
 
@@ -3723,15 +4337,17 @@
 {
     <span class="doccomment">/// Stores `value` in the garbage collector, returning a "weak" reference to
     /// it.
-    </span><span class="kw">pub fn </span>new(value: T, guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'a</span>&gt;(value: T, guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>guard = guard.as_ref();
         <span class="kw">let </span>(type_index, slot_generation, bin_id) = guard.adopt(Rooted::reference(value));
 
         <span class="self">Self </span>{
-            type_index,
-            creating_thread: guard.thread.thread_id,
-            slot_generation,
-            bin_id,
+            any: AnyRef {
+                type_index,
+                creating_thread: guard.thread.thread_id,
+                slot_generation,
+                bin_id,
+            },
             _t: PhantomData,
         }
     }
@@ -3739,33 +4355,28 @@
     <span class="doccomment">/// Returns this reference as an untyped reference.
     </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>as_any(<span class="self">self</span>) -&gt; AnyRef {
-        AnyRef {
-            type_id: <span class="self">self</span>.type_index,
-            creating_thread: <span class="self">self</span>.creating_thread,
-            slot_generation: <span class="self">self</span>.slot_generation,
-            bin_id: <span class="self">self</span>.bin_id,
-        }
+        <span class="self">self</span>.any
     }
 
     <span class="kw">fn </span>load_slot_from&lt;<span class="lifetime">'guard</span>&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bins: <span class="kw-2">&amp;</span>Map&lt;TypeIndex, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;,
-        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard,
+        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt; {
-        bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.type_index)<span class="question-mark">?
+        bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.any.type_index)<span class="question-mark">?
             </span>.as_any()
             .downcast_ref::&lt;Bin&lt;T&gt;&gt;()
             .assert(<span class="string">"type mismatch"</span>)
-            .load(<span class="self">self</span>.bin_id, <span class="self">self</span>.slot_generation, guard)
+            .load(<span class="self">self</span>.any.bin_id, <span class="self">self</span>.any.slot_generation, guard)
     }
 
-    <span class="kw">fn </span>load_slot&lt;<span class="lifetime">'guard</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt; {
-        <span class="kw">if </span>guard.thread.thread_id == <span class="self">self</span>.creating_thread {
+    <span class="kw">fn </span>load_slot&lt;<span class="lifetime">'guard</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt; {
+        <span class="kw">if </span>guard.thread.thread_id == <span class="self">self</span>.any.creating_thread {
             <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>guard.bins().by_type.read(), guard)
         } <span class="kw">else </span>{
             <span class="kw">let </span>all_threads = guard.thread.all_threads.read();
             <span class="kw">let </span>other_thread_bins = all_threads
-                .get(<span class="kw-2">&amp;</span><span class="self">self</span>.creating_thread)
+                .get(<span class="kw-2">&amp;</span><span class="self">self</span>.any.creating_thread)
                 .and_then(Weak::upgrade)<span class="question-mark">?</span>;
             <span class="kw">let </span>bins = guard.bins_for(<span class="kw-2">&amp;</span>other_thread_bins);
 
@@ -3777,25 +4388,15 @@
 
     <span class="doccomment">/// Loads a reference to the underlying data. Returns `None` if the data has
     /// been collected and is no longer available.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CollectionStarting` if `self` was created in another thread and
-    /// that thread is currently locked by the garbage collector.
     </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>load&lt;<span class="lifetime">'guard</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt; {
+    </span><span class="kw">pub fn </span>load&lt;<span class="lifetime">'guard</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt; {
         <span class="self">self</span>.load_slot(guard).map(|allocated| <span class="kw-2">&amp;</span>allocated.value)
     }
 
     <span class="doccomment">/// Loads a root reference to the underlying data. Returns `None` if the
     /// data has been collected and is no longer available.
-    ///
-    /// # Errors
-    ///
-    /// Returns `CollectionStarting` if `self` was created in another thread and
-    /// that thread is currently locked by the garbage collector.
     </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>as_root(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span>CollectionGuard) -&gt; <span class="prelude-ty">Option</span>&lt;Root&lt;T&gt;&gt; {
+    </span><span class="kw">pub fn </span>as_root(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;Root&lt;T&gt;&gt; {
         <span class="self">self</span>.load_slot(guard).map(|allocated| {
             allocated.roots.fetch_add(<span class="number">1</span>, Ordering::Acquire);
             Root {
@@ -3804,14 +4405,13 @@
             }
         })
     }
+}
 
-    <span class="doccomment">/// Returns true if these two references point to the same underlying
-    /// allocation.
-    </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>ptr_eq(this: <span class="kw-2">&amp;</span><span class="self">Self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
-        this.bin_id == other.bin_id
-            &amp;&amp; this.creating_thread == other.creating_thread
-            &amp;&amp; this.slot_generation == other.slot_generation
+<span class="kw">impl</span>&lt;T&gt; Eq <span class="kw">for </span>Ref&lt;T&gt; {}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq <span class="kw">for </span>Ref&lt;T&gt; {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.any == other.any
     }
 }
 
@@ -3823,19 +4423,56 @@
 
 <span class="kw">impl</span>&lt;T&gt; Copy <span class="kw">for </span>Ref&lt;T&gt; {}
 
-<span class="comment">// SAFETY: Ref&lt;T&gt;'s usage of a pointer prevents auto implementation.
-// `Collectable` requires `Send`, and `Ref&lt;T&gt;` ensures proper Send + Sync
-// behavior in its memory accesses.
-</span><span class="kw">unsafe impl</span>&lt;T&gt; Send <span class="kw">for </span>Ref&lt;T&gt; <span class="kw">where </span>T: Collectable {}
-<span class="comment">// SAFETY: Ref&lt;T&gt;'s usage of a pointer prevents auto implementation.
-// `Collectable` requires `Send`, and `Ref&lt;T&gt;` ensures proper Send + Sync
-// behavior in its memory accesses.
-</span><span class="kw">unsafe impl</span>&lt;T&gt; Sync <span class="kw">for </span>Ref&lt;T&gt; <span class="kw">where </span>T: Collectable {}
+<span class="kw">impl</span>&lt;T&gt; Hash <span class="kw">for </span>Ref&lt;T&gt; {
+    <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
+        <span class="self">self</span>.any.hash(state);
+    }
+}
 
-<span class="doccomment">/// A lock has been established by the collector on data needed to resolve a
-/// reference.
-</span><span class="attr">#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-</span><span class="kw">pub struct </span>CollectionStarting;
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;Root&lt;T&gt;&gt; <span class="kw">for </span>Ref&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>Root&lt;T&gt;) -&gt; bool {
+        <span class="kw-2">*</span><span class="self">self </span>== other.reference
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>Root&lt;T&gt;&gt; <span class="kw">for </span>Ref&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: &amp;&amp;<span class="lifetime">'_ </span>Root&lt;T&gt;) -&gt; bool {
+        <span class="self">self </span>== <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;AnyRef&gt; <span class="kw">for </span>Ref&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>AnyRef) -&gt; bool {
+        <span class="self">self</span>.any == <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialEq&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>AnyRef&gt; <span class="kw">for </span>Ref&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: &amp;&amp;<span class="lifetime">'_ </span>AnyRef) -&gt; bool {
+        <span class="self">self </span>== <span class="kw-2">*</span>other
+    }
+}
+
+<span class="comment">// SAFETY: Ref&lt;T&gt;'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Ref&lt;T&gt;` ensures proper Send + Sync
+// behavior in its memory accesses.
+</span><span class="kw">unsafe impl</span>&lt;T&gt; Send <span class="kw">for </span>Ref&lt;T&gt; <span class="kw">where </span>T: Send {}
+<span class="comment">// SAFETY: Ref&lt;T&gt;'s usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Ref&lt;T&gt;` ensures proper Send + Sync
+// behavior in its memory accesses.
+</span><span class="kw">unsafe impl</span>&lt;T&gt; Sync <span class="kw">for </span>Ref&lt;T&gt; <span class="kw">where </span>T: Sync {}
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>Bins {
@@ -3870,7 +4507,7 @@
         </span><span class="kw-2">&amp;*</span>(<span class="kw-2">*</span>slot.value.get()).allocated
     }
 
-    <span class="kw">fn </span>adopt&lt;T&gt;(value: Rooted&lt;T&gt;, bins_guard: <span class="kw-2">&amp;</span>CollectionGuard) -&gt; (TypeIndex, u32, BinId)
+    <span class="kw">fn </span>adopt&lt;T&gt;(value: Rooted&lt;T&gt;, bins_guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; (TypeIndex, u32, BinId)
     <span class="kw">where
         </span>T: Collectable,
     {
@@ -3974,7 +4611,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bin_id: BinId,
         slot_generation: u32,
-        _guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard,
+        _guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt; {
         <span class="kw">let </span>slab = <span class="self">self</span>.slabs.get(bin_id.slab() <span class="kw">as </span>usize)<span class="question-mark">?</span>;
         <span class="kw">let </span>slot = <span class="kw-2">&amp;</span>slab.slots[usize::from(bin_id.slot())];
@@ -4013,12 +4650,11 @@
                 </span><span class="kw">let </span>root_count =
                     <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>slot.value.get()).allocated.roots.load(Ordering::Relaxed) };
                 <span class="kw">if </span>root_count &gt; <span class="number">0 </span>{
-                    tracer.mark::&lt;T&gt;(Ref {
+                    tracer.mark(AnyRef {
                         type_index: <span class="self">self</span>.type_index,
                         creating_thread: tracer.tracing_thread,
                         slot_generation,
                         bin_id: BinId::new(slab_index.cast::&lt;u32&gt;(), index.cast::&lt;u8&gt;()),
-                        _t: PhantomData,
                     });
                 }
             }
@@ -4092,7 +4728,7 @@
         id: BinId,
         slot_generation: u32,
         bin: <span class="kw-2">&amp;</span><span class="kw">dyn </span>AnyBin,
-        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard,
+        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt;;
 }
 
@@ -4116,7 +4752,7 @@
         id: BinId,
         slot_generation: u32,
         bin: <span class="kw-2">&amp;</span><span class="kw">dyn </span>AnyBin,
-        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard,
+        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>C::Target&gt; {
         <span class="kw">let </span>ref_counted = bin
             .as_any()
@@ -4128,7 +4764,7 @@
     }
 }
 
-<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 </span><span class="kw">struct </span>BinId(u32);
 
 <span class="kw">impl </span>BinId {
@@ -4496,7 +5132,7 @@
     GlobalCollector::get().info.wait_for_collection(now);
 }
 
-<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 </span><span class="kw">struct </span>TypeIndex(u32);
 
 <span class="kw">impl </span>TypeIndex {
@@ -4519,8 +5155,9 @@
 }
 
 <span class="doccomment">/// A type-erased garbage collected reference.
+</span><span class="attr">#[derive(Clone, Copy, Eq, PartialEq)]
 </span><span class="kw">pub struct </span>AnyRef {
-    type_id: TypeIndex,
+    type_index: TypeIndex,
     creating_thread: CollectorThreadId,
     slot_generation: u32,
     bin_id: BinId,
@@ -4538,13 +5175,10 @@
             .type_indexes
             .read()
             .get(<span class="kw-2">&amp;</span>TypeId::of::&lt;T&gt;())
-            == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.type_id);
+            == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.type_index);
 
         correct_type.then_some(Ref {
-            type_index: <span class="self">self</span>.type_id,
-            creating_thread: <span class="self">self</span>.creating_thread,
-            slot_generation: <span class="self">self</span>.slot_generation,
-            bin_id: <span class="self">self</span>.bin_id,
+            any: <span class="kw-2">*</span><span class="self">self</span>,
             _t: PhantomData,
         })
     }
@@ -4559,9 +5193,19 @@
         <span class="self">self</span>.downcast_ref().and_then(|r| r.as_root(guard))
     }
 
+    <span class="doccomment">/// Loads a reference to the underlying data. Returns `None` if the data has
+    /// been collected and is no longer available.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>load&lt;<span class="lifetime">'guard</span>, T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt;
+    <span class="kw">where
+        </span>T: Collectable,
+    {
+        <span class="self">self</span>.downcast_ref().and_then(|r| r.load(guard))
+    }
+
     <span class="doccomment">/// Returns a reference to the result of [`MapAs::map_as()`], if the value
     /// has not been collected and [`MapAs::Target`] is `T`.
-    </span><span class="kw">pub fn </span>load_mapped&lt;<span class="lifetime">'guard</span>, T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt;
+    </span><span class="kw">pub fn </span>load_mapped&lt;<span class="lifetime">'guard</span>, T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt;
     <span class="kw">where
         </span>T: <span class="question-mark">?</span>Sized + <span class="lifetime">'static</span>,
     {
@@ -4583,12 +5227,12 @@
     <span class="kw">fn </span>load_mapped_slot_from&lt;<span class="lifetime">'guard</span>, T&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         bins: <span class="kw-2">&amp;</span>Map&lt;TypeIndex, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;,
-        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard,
+        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>T&gt;
     <span class="kw">where
         </span>T: <span class="question-mark">?</span>Sized + <span class="lifetime">'static</span>,
     {
-        <span class="kw">let </span>bins = bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.type_id)<span class="question-mark">?</span>;
+        <span class="kw">let </span>bins = bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.type_index)<span class="question-mark">?</span>;
 
         bins.mapper().downcast_ref::&lt;Mapper&lt;T&gt;&gt;()<span class="question-mark">?</span>.<span class="number">0</span>.load_mapped(
             <span class="self">self</span>.bin_id,
@@ -4596,6 +5240,56 @@
             <span class="kw-2">&amp;**</span>bins,
             guard,
         )
+    }
+}
+
+<span class="kw">impl </span>Trace <span class="kw">for </span>AnyRef {
+    <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = <span class="bool-val">true</span>;
+
+    <span class="kw">fn </span>trace(<span class="kw-2">&amp;</span><span class="self">self</span>, tracer: <span class="kw-2">&amp;mut </span>Tracer) {
+        tracer.mark(<span class="self">self</span>);
+    }
+}
+
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>AnyRef&gt; <span class="kw">for </span>AnyRef {
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'_ </span>AnyRef) -&gt; <span class="self">Self </span>{
+        <span class="kw-2">*</span>value
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>Ref&lt;T&gt;&gt; <span class="kw">for </span>AnyRef
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'_ </span>Ref&lt;T&gt;) -&gt; <span class="self">Self </span>{
+        value.as_any()
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; From&lt;Ref&lt;T&gt;&gt; <span class="kw">for </span>AnyRef
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>from(value: Ref&lt;T&gt;) -&gt; <span class="self">Self </span>{
+        value.as_any()
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'_ </span>Root&lt;T&gt;&gt; <span class="kw">for </span>AnyRef
+<span class="kw">where
+    </span>T: Collectable,
+{
+    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'_ </span>Root&lt;T&gt;) -&gt; <span class="self">Self </span>{
+        value.as_any()
+    }
+}
+
+<span class="kw">impl </span>Hash <span class="kw">for </span>AnyRef {
+    <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
+        <span class="self">self</span>.type_index.hash(state);
+        <span class="self">self</span>.creating_thread.hash(state);
+        <span class="self">self</span>.slot_generation.hash(state);
+        <span class="self">self</span>.bin_id.hash(state);
     }
 }
 </code></pre></div></section></main></body></html>

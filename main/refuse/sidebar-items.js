@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["collect","collected"],"mod":["architecture"],"struct":["AnyRef","CollectionGuard","CollectionStarting","Ref","Root","Tracer"],"trait":["Collectable","ContainsNoRefs","MapAs","NoMapping","SimpleType","Trace"]};
+window.SIDEBAR_ITEMS = {"attr":["collected"],"derive":["MapAs","Trace"],"fn":["collect","collected"],"mod":["architecture"],"struct":["AnyRef","CollectionGuard","LocalPool","Ref","Root","Tracer"],"trait":["Collectable","ContainsNoRefs","MapAs","NoMapping","SimpleType","Trace"]};
