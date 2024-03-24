@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (85e449a32 2024-03-22)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (2f090c30d 2024-03-23)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -2646,6 +2646,91 @@
 <a href="#2644" id="2644">2644</a>
 <a href="#2645" id="2645">2645</a>
 <a href="#2646" id="2646">2646</a>
+<a href="#2647" id="2647">2647</a>
+<a href="#2648" id="2648">2648</a>
+<a href="#2649" id="2649">2649</a>
+<a href="#2650" id="2650">2650</a>
+<a href="#2651" id="2651">2651</a>
+<a href="#2652" id="2652">2652</a>
+<a href="#2653" id="2653">2653</a>
+<a href="#2654" id="2654">2654</a>
+<a href="#2655" id="2655">2655</a>
+<a href="#2656" id="2656">2656</a>
+<a href="#2657" id="2657">2657</a>
+<a href="#2658" id="2658">2658</a>
+<a href="#2659" id="2659">2659</a>
+<a href="#2660" id="2660">2660</a>
+<a href="#2661" id="2661">2661</a>
+<a href="#2662" id="2662">2662</a>
+<a href="#2663" id="2663">2663</a>
+<a href="#2664" id="2664">2664</a>
+<a href="#2665" id="2665">2665</a>
+<a href="#2666" id="2666">2666</a>
+<a href="#2667" id="2667">2667</a>
+<a href="#2668" id="2668">2668</a>
+<a href="#2669" id="2669">2669</a>
+<a href="#2670" id="2670">2670</a>
+<a href="#2671" id="2671">2671</a>
+<a href="#2672" id="2672">2672</a>
+<a href="#2673" id="2673">2673</a>
+<a href="#2674" id="2674">2674</a>
+<a href="#2675" id="2675">2675</a>
+<a href="#2676" id="2676">2676</a>
+<a href="#2677" id="2677">2677</a>
+<a href="#2678" id="2678">2678</a>
+<a href="#2679" id="2679">2679</a>
+<a href="#2680" id="2680">2680</a>
+<a href="#2681" id="2681">2681</a>
+<a href="#2682" id="2682">2682</a>
+<a href="#2683" id="2683">2683</a>
+<a href="#2684" id="2684">2684</a>
+<a href="#2685" id="2685">2685</a>
+<a href="#2686" id="2686">2686</a>
+<a href="#2687" id="2687">2687</a>
+<a href="#2688" id="2688">2688</a>
+<a href="#2689" id="2689">2689</a>
+<a href="#2690" id="2690">2690</a>
+<a href="#2691" id="2691">2691</a>
+<a href="#2692" id="2692">2692</a>
+<a href="#2693" id="2693">2693</a>
+<a href="#2694" id="2694">2694</a>
+<a href="#2695" id="2695">2695</a>
+<a href="#2696" id="2696">2696</a>
+<a href="#2697" id="2697">2697</a>
+<a href="#2698" id="2698">2698</a>
+<a href="#2699" id="2699">2699</a>
+<a href="#2700" id="2700">2700</a>
+<a href="#2701" id="2701">2701</a>
+<a href="#2702" id="2702">2702</a>
+<a href="#2703" id="2703">2703</a>
+<a href="#2704" id="2704">2704</a>
+<a href="#2705" id="2705">2705</a>
+<a href="#2706" id="2706">2706</a>
+<a href="#2707" id="2707">2707</a>
+<a href="#2708" id="2708">2708</a>
+<a href="#2709" id="2709">2709</a>
+<a href="#2710" id="2710">2710</a>
+<a href="#2711" id="2711">2711</a>
+<a href="#2712" id="2712">2712</a>
+<a href="#2713" id="2713">2713</a>
+<a href="#2714" id="2714">2714</a>
+<a href="#2715" id="2715">2715</a>
+<a href="#2716" id="2716">2716</a>
+<a href="#2717" id="2717">2717</a>
+<a href="#2718" id="2718">2718</a>
+<a href="#2719" id="2719">2719</a>
+<a href="#2720" id="2720">2720</a>
+<a href="#2721" id="2721">2721</a>
+<a href="#2722" id="2722">2722</a>
+<a href="#2723" id="2723">2723</a>
+<a href="#2724" id="2724">2724</a>
+<a href="#2725" id="2725">2725</a>
+<a href="#2726" id="2726">2726</a>
+<a href="#2727" id="2727">2727</a>
+<a href="#2728" id="2728">2728</a>
+<a href="#2729" id="2729">2729</a>
+<a href="#2730" id="2730">2730</a>
+<a href="#2731" id="2731">2731</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -2653,6 +2738,7 @@
 <span class="kw">use </span>std::any::{Any, TypeId};
 <span class="kw">use </span>std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 <span class="kw">use </span>std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
+<span class="kw">use </span>std::fmt::Display;
 <span class="kw">use </span>std::hash::Hash;
 <span class="kw">use </span>std::marker::PhantomData;
 <span class="kw">use </span>std::mem::ManuallyDrop;
@@ -2676,7 +2762,7 @@
 <span class="kw">use </span>kempt::map::Field;
 <span class="kw">use </span>kempt::{Map, Set};
 <span class="kw">use </span>parking_lot::{Condvar, Mutex, RwLock};
-<span class="kw">pub use </span>refuse_macros::{collected, MapAs, Trace};
+<span class="kw">pub use </span>refuse_macros::{MapAs, Trace};
 
 <span class="doccomment">/// Architecture overview of the underlying design of Refuse.
 ///
@@ -3263,20 +3349,24 @@
 }
 
 <span class="kw">impl </span>ThreadPool {
+    <span class="kw">fn </span>map_current&lt;R&gt;(map: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; R) -&gt; R {
+        THREAD_POOL.with_borrow(|tp| map(tp.get_or_init(ThreadPool::default)))
+    }
+
     <span class="kw">fn </span>get() -&gt; <span class="self">Self </span>{
-        THREAD_POOL.with_borrow(|tp| tp.get().expect(<span class="string">"not invoked from collected()"</span>).clone())
+        <span class="self">Self</span>::map_current(<span class="self">Self</span>::clone)
+    }
+
+    <span class="kw">fn </span>current_depth() -&gt; usize {
+        <span class="self">Self</span>::map_current(|tp| tp.guard_depth.get())
     }
 
     <span class="kw">fn </span>push_thread_guard() -&gt; usize {
-        THREAD_POOL.with_borrow(|tp| tp.get().expect(<span class="string">"not invoked from collected()"</span>).push_guard())
+        <span class="self">Self</span>::map_current(<span class="self">Self</span>::push_guard)
     }
 
     <span class="kw">fn </span>release_thread_guard() {
-        THREAD_POOL.with_borrow(|tp| {
-            tp.get()
-                .expect(<span class="string">"not invoked from collected()"</span>)
-                .release_guard();
-        });
+        <span class="self">Self</span>::map_current(<span class="self">Self</span>::release_guard)
     }
 
     <span class="kw">fn </span>push_guard(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
@@ -3364,22 +3454,6 @@
             CollectorCommand::ThreadShutdown(<span class="self">self</span>.thread_id).send();
         }
     }
-}
-
-<span class="doccomment">/// Executes `wrapped` with garbage collection available.
-///
-/// This function installs a garbage collector for this thread, if needed.
-/// Repeated and nested calls are allowed.
-///
-/// Invoking [`CollectionGuard::acquire()`] within `wrapped` will return a
-/// result, while invoking it outside of a collected context will panic.
-///
-/// This function utilizes Rust's thread-local storage.
-</span><span class="kw">pub fn </span>collected&lt;R&gt;(wrapped: <span class="kw">impl </span>FnOnce() -&gt; R) -&gt; R {
-    THREAD_POOL.with_borrow(|lock| {
-        lock.get_or_init(ThreadPool::default);
-        wrapped()
-    })
 }
 
 <span class="kw">struct </span>ReaderState(AtomicUsize);
@@ -3604,8 +3678,31 @@
     /// until the collection finishes.
     ///
     /// Finally, the guard is reacquired before returning.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if any other [`CollectionGuard`]s are held by
+    /// the current thread when invoked.
     </span><span class="kw">pub fn </span>collect(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="self">self</span>.while_unlocked(collect);
+        <span class="self">self</span>.try_collect().unwrap();
+    }
+
+    <span class="doccomment">/// Manually invokes the garbage collector.
+    ///
+    /// This method temporarily releases this guard's lock and waits for a
+    /// garbage collection to run. If a garbage collection is already in
+    /// progress, this function will return when the in-progress collection
+    /// completes. Otherwise, the collector is started and this function waits
+    /// until the collection finishes.
+    ///
+    /// Finally, the guard is reacquired before returning.
+    ///
+    /// # Errors
+    ///
+    /// If another [`CollectionGuard`] is held by the current thread,
+    /// [`WouldDeadlock`] will be returned and `unlocked` will not be invoked.
+    </span><span class="kw">pub fn </span>try_collect(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), WouldDeadlock&gt; {
+        <span class="self">self</span>.try_while_unlocked(collect_unchecked)
     }
 
     <span class="doccomment">/// Yield to the garbage collector, if needed.
@@ -3614,19 +3711,45 @@
     /// acquire this thread's lock. Because of this, it is a fairly efficient
     /// function to invoke. To minimize collection pauses, long-held guards
     /// should call this function regularly.
+    ///
+    /// If any other guards are currently held by this thread, this function
+    /// does nothing.
     </span><span class="kw">pub fn </span>yield_to_collector(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if </span><span class="self">self</span>.collector.release_reader_if_collecting() {
+        <span class="comment">// We only need to attempt yielding if we are the outermost guard.
+        </span><span class="kw">if </span>ThreadPool::current_depth() == <span class="number">1 </span>&amp;&amp; <span class="self">self</span>.collector.release_reader_if_collecting() {
             <span class="self">self</span>.collector.acquire_reader();
         }
     }
 
     <span class="doccomment">/// Executes `unlocked` while this guard is temporarily released.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if any other [`CollectionGuard`]s are held by
+    /// the current thread when invoked.
     </span><span class="kw">pub fn </span>while_unlocked&lt;R&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, unlocked: <span class="kw">impl </span>FnOnce() -&gt; R) -&gt; R {
-        <span class="self">self</span>.collector.release_reader();
-        <span class="kw">let </span>result = unlocked();
-        <span class="self">self</span>.collector.acquire_reader();
+        <span class="self">self</span>.try_while_unlocked(unlocked).unwrap()
+    }
 
-        result
+    <span class="doccomment">/// Executes `unlocked` while this guard is temporarily released.
+    ///
+    /// # Errors
+    ///
+    /// If another [`CollectionGuard`] is held by the current thread,
+    /// [`WouldDeadlock`] will be returned and `unlocked` will not be invoked.
+    </span><span class="kw">pub fn </span>try_while_unlocked&lt;R&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        unlocked: <span class="kw">impl </span>FnOnce() -&gt; R,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;R, WouldDeadlock&gt; {
+        <span class="kw">if </span>ThreadPool::current_depth() == <span class="number">1 </span>{
+            <span class="self">self</span>.collector.release_reader();
+            <span class="kw">let </span>result = unlocked();
+            <span class="self">self</span>.collector.acquire_reader();
+
+            <span class="prelude-val">Ok</span>(result)
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(WouldDeadlock)
+        }
     }
 
     <span class="kw">fn </span>adopt&lt;T: Collectable&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, value: Rooted&lt;T&gt;) -&gt; (TypeIndex, u32, BinId) {
@@ -4290,12 +4413,10 @@
 /// ```rust
 /// use refuse::{CollectionGuard, Ref};
 ///
-/// refuse::collected(|| {
-///     let guard = CollectionGuard::acquire();
-///     let data = Ref::new(42, &amp;guard);
+/// let guard = CollectionGuard::acquire();
+/// let data = Ref::new(42, &amp;guard);
 ///
-///     assert_eq!(data.load(&amp;guard), Some(&amp;42));
-/// });
+/// assert_eq!(data.load(&amp;guard), Some(&amp;42));
 /// ```
 ///
 /// References returned from [`Ref::load()`] are tied to the lifetime of the
@@ -5123,10 +5244,59 @@
 
 <span class="doccomment">/// Invokes the garbage collector.
 ///
-/// This function will deadlock if any [`CollectionGuard`]s are held by the
-/// current thread when invoked. If a guard is held, consider calling
-/// [`CollectionGuard::collect()`] instead.
+/// # Panics
+///
+/// This function will panic if any [`CollectionGuard`]s are held and not
+/// yielding by the current thread when invoked. If a guard is held, consider
+/// calling [`CollectionGuard::collect()`] instead.
 </span><span class="kw">pub fn </span>collect() {
+    try_collect().unwrap()
+}
+
+<span class="doccomment">/// Invokes the garbage collector.
+///
+/// # Errors
+///
+/// If any [`CollectionGuard`]s are held by this thread when this function is
+/// invoked, [`WouldDeadlock`] is returned.
+</span><span class="kw">pub fn </span>try_collect() -&gt; <span class="prelude-ty">Result</span>&lt;(), WouldDeadlock&gt; {
+    <span class="kw">if </span>ThreadPool::current_depth() &gt; <span class="number">0 </span>{
+        <span class="kw">return </span><span class="prelude-val">Err</span>(WouldDeadlock);
+    }
+    collect_unchecked();
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="doccomment">/// An error indicating an operation would deadlock.
+///
+/// [`CollectionGuard::acquire`] can be called multiple times from the same
+/// thread, but some operations require that all guards for the current thread
+/// have been released before performing. This error signals when an operation
+/// can't succeed because the current thread has an outstanding guard that must
+/// be dropped for the operation to be able to be performed.
+///
+/// ```rust
+/// use refuse::{CollectionGuard, WouldDeadlock};
+///
+/// let mut guard1 = CollectionGuard::acquire();
+/// let guard2 = CollectionGuard::acquire();
+///
+/// assert_eq!(guard1.try_collect(), Err(WouldDeadlock));
+///
+/// drop(guard2);
+///
+/// assert_eq!(guard1.try_collect(), Ok(()));
+/// ```
+</span><span class="attr">#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>WouldDeadlock;
+
+<span class="kw">impl </span>Display <span class="kw">for </span>WouldDeadlock {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        f.write_str(<span class="string">"current thread has a non-yielding CollectionGuard"</span>)
+    }
+}
+
+<span class="kw">fn </span>collect_unchecked() {
     <span class="kw">let </span>now = Instant::now();
     CollectorCommand::Collect(now).send();
     GlobalCollector::get().info.wait_for_collection(now);
