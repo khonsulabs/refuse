@@ -5,6 +5,7 @@ use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
 use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
+use std::fmt::Display;
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
@@ -28,7 +29,7 @@ use intentional::{Assert, Cast};
 use kempt::map::Field;
 use kempt::{Map, Set};
 use parking_lot::{Condvar, Mutex, RwLock};
-pub use refuse_macros::{collected, MapAs, Trace};
+pub use refuse_macros::{MapAs, Trace};
 
 /// Architecture overview of the underlying design of Refuse.
 ///
@@ -615,20 +616,24 @@ struct ThreadPool {
 }
 
 impl ThreadPool {
+    fn map_current<R>(map: impl FnOnce(&Self) -> R) -> R {
+        THREAD_POOL.with_borrow(|tp| map(tp.get_or_init(ThreadPool::default)))
+    }
+
     fn get() -> Self {
-        THREAD_POOL.with_borrow(|tp| tp.get().expect("not invoked from collected()").clone())
+        Self::map_current(Self::clone)
+    }
+
+    fn current_depth() -> usize {
+        Self::map_current(|tp| tp.guard_depth.get())
     }
 
     fn push_thread_guard() -> usize {
-        THREAD_POOL.with_borrow(|tp| tp.get().expect("not invoked from collected()").push_guard())
+        Self::map_current(Self::push_guard)
     }
 
     fn release_thread_guard() {
-        THREAD_POOL.with_borrow(|tp| {
-            tp.get()
-                .expect("not invoked from collected()")
-                .release_guard();
-        });
+        Self::map_current(Self::release_guard)
     }
 
     fn push_guard(&self) -> usize {
@@ -716,22 +721,6 @@ impl Drop for LocalPool {
             CollectorCommand::ThreadShutdown(self.thread_id).send();
         }
     }
-}
-
-/// Executes `wrapped` with garbage collection available.
-///
-/// This function installs a garbage collector for this thread, if needed.
-/// Repeated and nested calls are allowed.
-///
-/// Invoking [`CollectionGuard::acquire()`] within `wrapped` will return a
-/// result, while invoking it outside of a collected context will panic.
-///
-/// This function utilizes Rust's thread-local storage.
-pub fn collected<R>(wrapped: impl FnOnce() -> R) -> R {
-    THREAD_POOL.with_borrow(|lock| {
-        lock.get_or_init(ThreadPool::default);
-        wrapped()
-    })
 }
 
 struct ReaderState(AtomicUsize);
@@ -956,8 +945,31 @@ impl CollectionGuard<'_> {
     /// until the collection finishes.
     ///
     /// Finally, the guard is reacquired before returning.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if any other [`CollectionGuard`]s are held by
+    /// the current thread when invoked.
     pub fn collect(&mut self) {
-        self.while_unlocked(collect);
+        self.try_collect().unwrap();
+    }
+
+    /// Manually invokes the garbage collector.
+    ///
+    /// This method temporarily releases this guard's lock and waits for a
+    /// garbage collection to run. If a garbage collection is already in
+    /// progress, this function will return when the in-progress collection
+    /// completes. Otherwise, the collector is started and this function waits
+    /// until the collection finishes.
+    ///
+    /// Finally, the guard is reacquired before returning.
+    ///
+    /// # Errors
+    ///
+    /// If another [`CollectionGuard`] is held by the current thread,
+    /// [`WouldDeadlock`] will be returned and `unlocked` will not be invoked.
+    pub fn try_collect(&mut self) -> Result<(), WouldDeadlock> {
+        self.try_while_unlocked(collect_unchecked)
     }
 
     /// Yield to the garbage collector, if needed.
@@ -966,19 +978,45 @@ impl CollectionGuard<'_> {
     /// acquire this thread's lock. Because of this, it is a fairly efficient
     /// function to invoke. To minimize collection pauses, long-held guards
     /// should call this function regularly.
+    ///
+    /// If any other guards are currently held by this thread, this function
+    /// does nothing.
     pub fn yield_to_collector(&mut self) {
-        if self.collector.release_reader_if_collecting() {
+        // We only need to attempt yielding if we are the outermost guard.
+        if ThreadPool::current_depth() == 1 && self.collector.release_reader_if_collecting() {
             self.collector.acquire_reader();
         }
     }
 
     /// Executes `unlocked` while this guard is temporarily released.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if any other [`CollectionGuard`]s are held by
+    /// the current thread when invoked.
     pub fn while_unlocked<R>(&mut self, unlocked: impl FnOnce() -> R) -> R {
-        self.collector.release_reader();
-        let result = unlocked();
-        self.collector.acquire_reader();
+        self.try_while_unlocked(unlocked).unwrap()
+    }
 
-        result
+    /// Executes `unlocked` while this guard is temporarily released.
+    ///
+    /// # Errors
+    ///
+    /// If another [`CollectionGuard`] is held by the current thread,
+    /// [`WouldDeadlock`] will be returned and `unlocked` will not be invoked.
+    pub fn try_while_unlocked<R>(
+        &mut self,
+        unlocked: impl FnOnce() -> R,
+    ) -> Result<R, WouldDeadlock> {
+        if ThreadPool::current_depth() == 1 {
+            self.collector.release_reader();
+            let result = unlocked();
+            self.collector.acquire_reader();
+
+            Ok(result)
+        } else {
+            Err(WouldDeadlock)
+        }
     }
 
     fn adopt<T: Collectable>(&self, value: Rooted<T>) -> (TypeIndex, u32, BinId) {
@@ -1642,12 +1680,10 @@ where
 /// ```rust
 /// use refuse::{CollectionGuard, Ref};
 ///
-/// refuse::collected(|| {
-///     let guard = CollectionGuard::acquire();
-///     let data = Ref::new(42, &guard);
+/// let guard = CollectionGuard::acquire();
+/// let data = Ref::new(42, &guard);
 ///
-///     assert_eq!(data.load(&guard), Some(&42));
-/// });
+/// assert_eq!(data.load(&guard), Some(&42));
 /// ```
 ///
 /// References returned from [`Ref::load()`] are tied to the lifetime of the
@@ -2475,10 +2511,59 @@ enum SlotSweepStatus {
 
 /// Invokes the garbage collector.
 ///
-/// This function will deadlock if any [`CollectionGuard`]s are held by the
-/// current thread when invoked. If a guard is held, consider calling
-/// [`CollectionGuard::collect()`] instead.
+/// # Panics
+///
+/// This function will panic if any [`CollectionGuard`]s are held and not
+/// yielding by the current thread when invoked. If a guard is held, consider
+/// calling [`CollectionGuard::collect()`] instead.
 pub fn collect() {
+    try_collect().unwrap()
+}
+
+/// Invokes the garbage collector.
+///
+/// # Errors
+///
+/// If any [`CollectionGuard`]s are held by this thread when this function is
+/// invoked, [`WouldDeadlock`] is returned.
+pub fn try_collect() -> Result<(), WouldDeadlock> {
+    if ThreadPool::current_depth() > 0 {
+        return Err(WouldDeadlock);
+    }
+    collect_unchecked();
+    Ok(())
+}
+
+/// An error indicating an operation would deadlock.
+///
+/// [`CollectionGuard::acquire`] can be called multiple times from the same
+/// thread, but some operations require that all guards for the current thread
+/// have been released before performing. This error signals when an operation
+/// can't succeed because the current thread has an outstanding guard that must
+/// be dropped for the operation to be able to be performed.
+///
+/// ```rust
+/// use refuse::{CollectionGuard, WouldDeadlock};
+///
+/// let mut guard1 = CollectionGuard::acquire();
+/// let guard2 = CollectionGuard::acquire();
+///
+/// assert_eq!(guard1.try_collect(), Err(WouldDeadlock));
+///
+/// drop(guard2);
+///
+/// assert_eq!(guard1.try_collect(), Ok(()));
+/// ```
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct WouldDeadlock;
+
+impl Display for WouldDeadlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("current thread has a non-yielding CollectionGuard")
+    }
+}
+
+fn collect_unchecked() {
     let now = Instant::now();
     CollectorCommand::Collect(now).send();
     GlobalCollector::get().info.wait_for_collection(now);

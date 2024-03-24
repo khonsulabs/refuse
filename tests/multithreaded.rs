@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use flume::{Receiver, Sender};
 use parking_lot::Mutex;
-use refuse::{collected, CollectionGuard, NoMapping, Ref, Root, SimpleType, Trace};
+use refuse::{CollectionGuard, NoMapping, Ref, Root, SimpleType, Trace};
 
 const WORK_ITERS: usize = 64;
 const WORK_ITEMS: usize = 64;
@@ -28,21 +28,17 @@ fn round_robin() {
         let next_sender = next.0.clone();
         let receiver = receiver.clone();
         let outstanding = outstanding.clone();
-        thread::spawn(move || {
-            collected(move || thread_worker(&receiver, &next_sender, &outstanding));
-        });
+        thread::spawn(move || thread_worker(&receiver, &next_sender, &outstanding));
     }
 
-    collected(|| {
-        let guard = CollectionGuard::acquire();
-        for i in 0..WORK_ITEMS {
-            channels[i % channels.len()]
-                .0
-                .send(Command::Enqueue(Root::new(WorkUnit::default(), &guard)))
-                .expect("worker disconnected early");
-        }
-        drop(guard);
-    });
+    let guard = CollectionGuard::acquire();
+    for i in 0..WORK_ITEMS {
+        channels[i % channels.len()]
+            .0
+            .send(Command::Enqueue(Root::new(WorkUnit::default(), &guard)))
+            .expect("worker disconnected early");
+    }
+    drop(guard);
 
     for i in 0..(WORK_ITEMS * WORK_ITERS) {
         channels[i % channels.len()]

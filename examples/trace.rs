@@ -1,14 +1,13 @@
 //! This example shows how the `Collectable` derive implements tracing
 //! automatically.
 
-use refuse::{collected, CollectionGuard, MapAs, Ref, Root, Trace};
+use refuse::{CollectionGuard, MapAs, Ref, Root, Trace};
 
 #[derive(Trace, MapAs)]
 struct Error {
     message: Ref<String>,
 }
 
-#[collected]
 fn main() {
     let mut guard = CollectionGuard::acquire();
 

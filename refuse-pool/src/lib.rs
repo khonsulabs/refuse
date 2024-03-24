@@ -306,20 +306,18 @@ impl PartialEq<RefString> for RootString {
 
 #[test]
 fn intern() {
-    refuse::collected(|| {
-        let mut guard = CollectionGuard::acquire();
-        let a = RootString::from("a");
-        let b = RootString::from("a");
-        assert!(Root::ptr_eq(&a.0, &b.0));
+    let mut guard = CollectionGuard::acquire();
+    let a = RootString::from("a");
+    let b = RootString::from("a");
+    assert!(Root::ptr_eq(&a.0, &b.0));
 
-        let as_ref = a.downgrade();
-        drop(a);
-        drop(b);
-        assert_eq!(as_ref.load(&guard), Some("a"));
+    let as_ref = a.downgrade();
+    drop(a);
+    drop(b);
+    assert_eq!(as_ref.load(&guard), Some("a"));
 
-        guard.collect();
+    guard.collect();
 
-        let _a = RootString::from("a");
-        assert!(as_ref.load(&guard).is_none());
-    });
+    let _a = RootString::from("a");
+    assert!(as_ref.load(&guard).is_none());
 }

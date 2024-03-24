@@ -4,7 +4,7 @@ use std::convert::Infallible;
 use std::hint::black_box;
 use std::sync::Arc;
 
-use refuse::{collected, CollectionGuard, Ref, Root};
+use refuse::{CollectionGuard, Ref, Root};
 use timings::{Benchmark, BenchmarkImplementation, Label, LabeledTimings, Timings};
 
 const TOTAL_ITERS: usize = 100_000;
@@ -105,21 +105,20 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcRef {
 
     fn measure(&mut self, measurements: &LabeledTimings<Label>) -> Result<(), Infallible> {
         let mut allocated = Vec::<Ref<[u8; 32]>>::with_capacity(ITERS_PER_RELEASE);
-        collected(|| {
-            let mut guard = CollectionGuard::acquire();
-            for _ in 0..OUTER_ITERS {
-                for i in 0..ITERS_PER_RELEASE {
-                    let timing = measurements.begin(self.metric.clone());
-                    let result = black_box(Ref::new([0; 32], &guard));
-                    if i == ITERS_PER_RELEASE - 1 {
-                        allocated.clear();
-                        guard.yield_to_collector();
-                    }
-                    timing.finish();
-                    allocated.push(result);
+
+        let mut guard = CollectionGuard::acquire();
+        for _ in 0..OUTER_ITERS {
+            for i in 0..ITERS_PER_RELEASE {
+                let timing = measurements.begin(self.metric.clone());
+                let result = black_box(Ref::new([0; 32], &guard));
+                if i == ITERS_PER_RELEASE - 1 {
+                    allocated.clear();
+                    guard.yield_to_collector();
                 }
+                timing.finish();
+                allocated.push(result);
             }
-        });
+        }
 
         Ok(())
     }
@@ -157,21 +156,20 @@ impl BenchmarkImplementation<Label, (), Infallible> for GcRoot {
 
     fn measure(&mut self, measurements: &LabeledTimings<Label>) -> Result<(), Infallible> {
         let mut allocated = Vec::<Root<[u8; 32]>>::with_capacity(ITERS_PER_RELEASE);
-        collected(|| {
-            let mut guard = CollectionGuard::acquire();
-            for _ in 0..OUTER_ITERS {
-                for i in 0..ITERS_PER_RELEASE {
-                    let timing = measurements.begin(self.metric.clone());
-                    let result = black_box(Root::new([0; 32], &guard));
-                    if i == ITERS_PER_RELEASE - 1 {
-                        allocated.clear();
-                        guard.yield_to_collector();
-                    }
-                    timing.finish();
-                    allocated.push(result);
+
+        let mut guard = CollectionGuard::acquire();
+        for _ in 0..OUTER_ITERS {
+            for i in 0..ITERS_PER_RELEASE {
+                let timing = measurements.begin(self.metric.clone());
+                let result = black_box(Root::new([0; 32], &guard));
+                if i == ITERS_PER_RELEASE - 1 {
+                    allocated.clear();
+                    guard.yield_to_collector();
                 }
+                timing.finish();
+                allocated.push(result);
             }
-        });
+        }
 
         Ok(())
     }

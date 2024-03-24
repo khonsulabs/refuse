@@ -8,25 +8,6 @@ use manyhow::manyhow;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
-#[manyhow(item_as_dummy)]
-#[proc_macro_attribute]
-pub fn collected(
-    _input: TokenStream,
-    syn::ItemFn {
-        attrs,
-        vis,
-        sig,
-        block,
-    }: syn::ItemFn,
-) -> TokenStream {
-    quote! {
-        #(#attrs)*
-        #vis #sig {
-            refuse::collected(|| #block);
-        }
-    }
-}
-
 #[manyhow]
 #[proc_macro_derive(MapAs, attributes(map_as))]
 pub fn derive_map_as(input: syn::Item) -> manyhow::Result {

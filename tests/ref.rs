@@ -1,7 +1,6 @@
-use refuse::{collected, CollectionGuard, Ref};
+use refuse::{CollectionGuard, Ref};
 
 #[test]
-#[collected]
 fn lifecycle() {
     let mut guard = CollectionGuard::acquire();
     let collected = Ref::new(42_u32, &guard);

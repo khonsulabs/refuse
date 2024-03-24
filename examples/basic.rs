@@ -1,7 +1,6 @@
 //! A basic usage example demonstrating the garbage collector.
-use refuse::{collected, CollectionGuard, Ref, Root};
+use refuse::{CollectionGuard, Ref, Root};
 
-#[collected]
 fn main() {
     let guard = CollectionGuard::acquire();
     // Allocate a vec![Ref(1), Ref(2), Ref(3)].

@@ -1,7 +1,6 @@
-use refuse::{collected, CollectionGuard, Root};
+use refuse::{CollectionGuard, Root};
 
 #[test]
-#[collected]
 fn clone() {
     let mut guard = CollectionGuard::acquire();
     let root = Root::new(42_u32, &guard);

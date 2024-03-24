@@ -13,7 +13,7 @@
 //! [rustnomicon]:
 //!     https://doc.rust-lang.org/nomicon/exotic-sizes.html#dynamically-sized-types-dsts
 
-use refuse::{collected, AnyRef, CollectionGuard, MapAs, Ref, Trace};
+use refuse::{AnyRef, CollectionGuard, MapAs, Ref, Trace};
 
 trait SomeTrait {
     fn do_something(&self);
@@ -29,7 +29,6 @@ impl SomeTrait for SomeType {
     }
 }
 
-#[collected]
 fn main() {
     let guard = CollectionGuard::acquire();
     let gced: Ref<SomeType> = Ref::new(SomeType, &guard);

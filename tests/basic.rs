@@ -1,8 +1,7 @@
 //! A basic usage example demonstrating the garbage collector.
-use refuse::{collected, CollectionGuard, Ref, Root};
+use refuse::{CollectionGuard, Ref, Root};
 
 #[test]
-#[collected]
 fn basic() {
     // Execute a closure with access to a garbage collector.
 
