@@ -2728,6 +2728,41 @@
 <a href="#2726" id="2726">2726</a>
 <a href="#2727" id="2727">2727</a>
 <a href="#2728" id="2728">2728</a>
+<a href="#2729" id="2729">2729</a>
+<a href="#2730" id="2730">2730</a>
+<a href="#2731" id="2731">2731</a>
+<a href="#2732" id="2732">2732</a>
+<a href="#2733" id="2733">2733</a>
+<a href="#2734" id="2734">2734</a>
+<a href="#2735" id="2735">2735</a>
+<a href="#2736" id="2736">2736</a>
+<a href="#2737" id="2737">2737</a>
+<a href="#2738" id="2738">2738</a>
+<a href="#2739" id="2739">2739</a>
+<a href="#2740" id="2740">2740</a>
+<a href="#2741" id="2741">2741</a>
+<a href="#2742" id="2742">2742</a>
+<a href="#2743" id="2743">2743</a>
+<a href="#2744" id="2744">2744</a>
+<a href="#2745" id="2745">2745</a>
+<a href="#2746" id="2746">2746</a>
+<a href="#2747" id="2747">2747</a>
+<a href="#2748" id="2748">2748</a>
+<a href="#2749" id="2749">2749</a>
+<a href="#2750" id="2750">2750</a>
+<a href="#2751" id="2751">2751</a>
+<a href="#2752" id="2752">2752</a>
+<a href="#2753" id="2753">2753</a>
+<a href="#2754" id="2754">2754</a>
+<a href="#2755" id="2755">2755</a>
+<a href="#2756" id="2756">2756</a>
+<a href="#2757" id="2757">2757</a>
+<a href="#2758" id="2758">2758</a>
+<a href="#2759" id="2759">2759</a>
+<a href="#2760" id="2760">2760</a>
+<a href="#2761" id="2761">2761</a>
+<a href="#2762" id="2762">2762</a>
+<a href="#2763" id="2763">2763</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -2735,7 +2770,7 @@
 <span class="kw">use </span>std::any::{Any, TypeId};
 <span class="kw">use </span>std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 <span class="kw">use </span>std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
-<span class="kw">use </span>std::fmt::Display;
+<span class="kw">use </span>std::fmt::{Debug, Display};
 <span class="kw">use </span>std::hash::Hash;
 <span class="kw">use </span>std::marker::PhantomData;
 <span class="kw">use </span>std::mem::ManuallyDrop;
@@ -4266,6 +4301,15 @@
     }
 }
 
+<span class="kw">impl</span>&lt;T&gt; Debug <span class="kw">for </span>Root&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable + Debug,
+{
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        Debug::fmt(<span class="kw-2">&amp;**</span><span class="self">self</span>, f)
+    }
+}
+
 <span class="kw">impl</span>&lt;T&gt; Clone <span class="kw">for </span>Root&lt;T&gt;
 <span class="kw">where
     </span>T: Collectable,
@@ -4532,6 +4576,18 @@
     }
 }
 
+<span class="kw">impl</span>&lt;T&gt; Ord <span class="kw">for </span>Ref&lt;T&gt; {
+    <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; std::cmp::Ordering {
+        <span class="self">self</span>.any.cmp(<span class="kw-2">&amp;</span>other.any)
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; PartialOrd <span class="kw">for </span>Ref&lt;T&gt; {
+    <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;std::cmp::Ordering&gt; {
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.any.cmp(<span class="kw-2">&amp;</span>other.any))
+    }
+}
+
 <span class="kw">impl</span>&lt;T&gt; Clone <span class="kw">for </span>Ref&lt;T&gt; {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw-2">*</span><span class="self">self
@@ -4579,6 +4635,20 @@
 {
     <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: &amp;&amp;<span class="lifetime">'_ </span>AnyRef) -&gt; bool {
         <span class="self">self </span>== <span class="kw-2">*</span>other
+    }
+}
+
+<span class="kw">impl</span>&lt;T&gt; Debug <span class="kw">for </span>Ref&lt;T&gt;
+<span class="kw">where
+    </span>T: Collectable + Debug,
+{
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="kw">let </span>guard = CollectionGuard::acquire();
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(contents) = <span class="self">self</span>.load(<span class="kw-2">&amp;</span>guard) {
+            Debug::fmt(contents, f)
+        } <span class="kw">else </span>{
+            f.debug_tuple(<span class="string">"Ref"</span>).field(<span class="kw-2">&amp;</span><span class="string">"&lt;freed&gt;"</span>).finish()
+        }
     }
 }
 
@@ -5320,12 +5390,12 @@
 }
 
 <span class="doccomment">/// A type-erased garbage collected reference.
-</span><span class="attr">#[derive(Clone, Copy, Eq, PartialEq)]
+</span><span class="attr">#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 </span><span class="kw">pub struct </span>AnyRef {
-    type_index: TypeIndex,
-    creating_thread: CollectorThreadId,
-    slot_generation: u32,
     bin_id: BinId,
+    creating_thread: CollectorThreadId,
+    type_index: TypeIndex,
+    slot_generation: u32,
 }
 
 <span class="kw">impl </span>AnyRef {
