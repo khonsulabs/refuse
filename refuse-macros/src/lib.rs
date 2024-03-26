@@ -66,6 +66,7 @@ fn field_accessor(field: &syn::Field, index: usize) -> TokenStream {
     if let Some(ident) = field.ident.clone() {
         quote!(#ident)
     } else {
+        let index = proc_macro2::Literal::usize_unsuffixed(index);
         quote!(#index)
     }
 }

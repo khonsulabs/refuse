@@ -5,7 +5,7 @@ use std::alloc::{alloc_zeroed, Layout};
 use std::any::{Any, TypeId};
 use std::cell::{Cell, OnceCell, RefCell, UnsafeCell};
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
@@ -1536,6 +1536,15 @@ where
     }
 }
 
+impl<T> Debug for Root<T>
+where
+    T: Collectable + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&**self, f)
+    }
+}
+
 impl<T> Clone for Root<T>
 where
     T: Collectable,
@@ -1802,6 +1811,18 @@ impl<T> PartialEq for Ref<T> {
     }
 }
 
+impl<T> Ord for Ref<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.any.cmp(&other.any)
+    }
+}
+
+impl<T> PartialOrd for Ref<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.any.cmp(&other.any))
+    }
+}
+
 impl<T> Clone for Ref<T> {
     fn clone(&self) -> Self {
         *self
@@ -1849,6 +1870,20 @@ where
 {
     fn eq(&self, other: &&'_ AnyRef) -> bool {
         self == *other
+    }
+}
+
+impl<T> Debug for Ref<T>
+where
+    T: Collectable + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let guard = CollectionGuard::acquire();
+        if let Some(contents) = self.load(&guard) {
+            Debug::fmt(contents, f)
+        } else {
+            f.debug_tuple("Ref").field(&"<freed>").finish()
+        }
     }
 }
 
@@ -2590,12 +2625,12 @@ impl TypeIndex {
 }
 
 /// A type-erased garbage collected reference.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct AnyRef {
-    type_index: TypeIndex,
-    creating_thread: CollectorThreadId,
-    slot_generation: u32,
     bin_id: BinId,
+    creating_thread: CollectorThreadId,
+    type_index: TypeIndex,
+    slot_generation: u32,
 }
 
 impl AnyRef {

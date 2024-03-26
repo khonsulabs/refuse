@@ -45,13 +45,43 @@ use std::ops::Deref;
 use std::sync::{Mutex, OnceLock};
 
 use ahash::AHasher;
-use hashbrown::HashTable;
-use refuse::{AnyRef, CollectionGuard, LocalPool, Ref, Root, SimpleType};
+use hashbrown::{hash_table, HashTable};
+use refuse::{AnyRef, CollectionGuard, LocalPool, Ref, Root, SimpleType, Trace};
+
+enum PoolEntry {
+    Rooted(RootString),
+    Weak(RefString, u64),
+}
+
+impl PoolEntry {
+    fn equals(&self, s: &str, guard: &CollectionGuard<'_>) -> bool {
+        match self {
+            PoolEntry::Rooted(r) => r == s,
+            PoolEntry::Weak(r, _) => r.load(guard).map_or(false, |r| r == s),
+        }
+    }
+
+    fn hash(&self) -> u64 {
+        match self {
+            PoolEntry::Rooted(r) => r.0.hash,
+            PoolEntry::Weak(_, hash) => *hash,
+        }
+    }
+}
+
+impl PartialEq<Root<PooledString>> for PoolEntry {
+    fn eq(&self, other: &Root<PooledString>) -> bool {
+        match self {
+            PoolEntry::Rooted(this) => this.0 == *other,
+            PoolEntry::Weak(this, _) => this.0 == *other,
+        }
+    }
+}
 
 #[derive(Default)]
 struct StringPool {
     allocator: LocalPool,
-    strings: HashTable<RootString>,
+    strings: HashTable<PoolEntry>,
 }
 
 impl StringPool {
@@ -60,23 +90,45 @@ impl StringPool {
         POOL.get_or_init(Mutex::default)
     }
 
-    fn intern(&mut self, key: Cow<'_, str>) -> &RootString {
+    fn intern(&mut self, key: Cow<'_, str>, guard: &CollectionGuard) -> &RootString {
         let hash = hash_str(key.as_ref());
-        self.strings
-            .entry(hash, |a| &*a.0.string == key.as_ref(), |e| e.0.hash)
-            .or_insert_with(|| {
-                RootString(Root::new(
-                    PooledString {
-                        hash,
-                        string: match key {
-                            Cow::Borrowed(str) => Box::from(str),
-                            Cow::Owned(str) => str.into_boxed_str(),
-                        },
-                    },
-                    &self.allocator.enter(),
-                ))
-            })
-            .into_mut()
+        match self
+            .strings
+            .entry(hash, |a| a.equals(&key, guard), |e| e.hash())
+        {
+            hash_table::Entry::Occupied(entry) => {
+                let entry = entry.into_mut();
+                match entry {
+                    PoolEntry::Rooted(root) => root,
+                    PoolEntry::Weak(weak, _) => {
+                        if let Some(upgraded) = weak.as_root(guard) {
+                            *entry = PoolEntry::Rooted(upgraded);
+                        } else {
+                            *entry = PoolEntry::Rooted(RootString(Root::new(
+                                PooledString::new(hash, key),
+                                guard,
+                            )));
+                        }
+                        let PoolEntry::Rooted(entry) = entry else {
+                            unreachable!("just set")
+                        };
+                        entry
+                    }
+                }
+            }
+            hash_table::Entry::Vacant(entry) => {
+                let PoolEntry::Rooted(root) = entry
+                    .insert(PoolEntry::Rooted(RootString(Root::new(
+                        PooledString::new(hash, key),
+                        &self.allocator.enter(),
+                    ))))
+                    .into_mut()
+                else {
+                    unreachable!("just set")
+                };
+                root
+            }
+        }
     }
 }
 
@@ -112,22 +164,23 @@ impl PartialEq<&'_ str> for StoredString {
 ///
 /// This type is cheap to check equality because it ensures each unique string
 /// is allocated only once, and references are reused automatically.
-#[derive(Clone)]
+#[derive(Clone, Trace)]
 pub struct RootString(Root<PooledString>);
 
 impl RootString {
-    /// Returns a root reference to a garabge collected string that contains
+    /// Returns a root reference to a garbage collected string that contains
     /// `s`.
     ///
-    /// If another `RootString` exists already with the same contents as `s`, it
-    /// will be returned and `s` will be dropped.
+    /// If another [`RootString`] or [`RefString`] exists already with the same
+    /// contents as `s`, it will be returned and `s` will be dropped.
     pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
+        let guard = CollectionGuard::acquire();
         let mut pool = StringPool::global().lock().expect("poisoned");
-        pool.intern(s.into()).clone()
+        pool.intern(s.into(), &guard).clone()
     }
 
     /// Returns a reference to this root string.
-    pub fn downgrade(&self) -> RefString {
+    pub const fn downgrade(&self) -> RefString {
         RefString(self.0.downgrade())
     }
 
@@ -152,13 +205,21 @@ impl Drop for RootString {
             // This is the last `RootString` aside from the one stored in the
             // pool, so we should remove the pool entry.
             let mut pool = StringPool::global().lock().expect("poisoned");
-            let Ok(entry) = pool
+            let entry = pool
                 .strings
-                .find_entry(self.0.hash, |s| Root::ptr_eq(&s.0, &self.0))
-                .map(|entry| entry.remove().0)
-            else {
-                return;
-            };
+                .find_entry(self.0.hash, |s| s == &self.0)
+                .ok()
+                .map(|mut entry| {
+                    let PoolEntry::Rooted(root) = entry.get() else {
+                        return None;
+                    };
+                    let weak = root.downgrade();
+                    let hash = root.0.hash;
+                    Some(std::mem::replace(
+                        entry.get_mut(),
+                        PoolEntry::Weak(weak, hash),
+                    ))
+                });
             drop(pool);
             // We delay dropping the removed entry to ensure that we don't
             // re-enter this block and cause a deadlock.
@@ -255,9 +316,22 @@ impl Deref for RootString {
     }
 }
 
+#[derive(Eq, PartialEq, Debug)]
 struct PooledString {
     hash: u64,
     string: Box<str>,
+}
+
+impl PooledString {
+    fn new(hash: u64, s: Cow<'_, str>) -> Self {
+        Self {
+            hash,
+            string: match s {
+                Cow::Borrowed(str) => Box::from(str),
+                Cow::Owned(str) => str.into_boxed_str(),
+            },
+        }
+    }
 }
 
 impl SimpleType for PooledString {}
@@ -271,10 +345,20 @@ impl Deref for PooledString {
 }
 
 /// A weak reference to a garbage collected, interned string.
-#[derive(Copy, Clone, Hash, Eq, PartialEq)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, Trace)]
 pub struct RefString(Ref<PooledString>);
 
 impl RefString {
+    /// Returns a reference to a garbage collected string that contains `s`.
+    ///
+    /// If another [`RootString`] or [`RefString`] exists already with the same
+    /// contents as `s`, it will be returned and `s` will be dropped.
+    pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
+        let guard = CollectionGuard::acquire();
+        let mut pool = StringPool::global().lock().expect("poisoned");
+        pool.intern(s.into(), &guard).downgrade()
+    }
+
     /// Loads a reference to the underlying string, if the string hasn't been
     /// freed.
     pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard str> {
@@ -304,6 +388,34 @@ impl PartialEq<RefString> for RootString {
     }
 }
 
+impl From<&'_ str> for RefString {
+    fn from(value: &'_ str) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<&'_ String> for RefString {
+    fn from(value: &'_ String) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<String> for RefString {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+impl Debug for RefString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(s) = self.load(&CollectionGuard::acquire()) {
+            Debug::fmt(s, f)
+        } else {
+            f.write_str("string freed")
+        }
+    }
+}
+
 #[test]
 fn intern() {
     let mut guard = CollectionGuard::acquire();
@@ -320,4 +432,14 @@ fn intern() {
 
     let _a = RootString::from("a");
     assert!(as_ref.load(&guard).is_none());
+}
+#[test]
+fn reintern_nocollect() {
+    let guard = CollectionGuard::acquire();
+    let a = RootString::from("reintern");
+    let original = a.downgrade();
+    drop(a);
+    let a = RootString::from("reintern");
+    assert_eq!(a.0, original.0);
+    drop(guard);
 }
