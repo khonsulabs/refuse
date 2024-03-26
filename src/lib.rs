@@ -1753,8 +1753,7 @@ where
     ) -> Option<&'guard Rooted<T>> {
         bins.get(&self.any.type_index)?
             .as_any()
-            .downcast_ref::<Bin<T>>()
-            .assert("type mismatch")
+            .downcast_ref::<Bin<T>>()?
             .load(self.any.bin_id, self.any.slot_generation, guard)
     }
 
@@ -2142,11 +2141,10 @@ where
         bin: &dyn AnyBin,
         guard: &'guard CollectionGuard<'_>,
     ) -> Option<&'guard C::Target> {
-        let ref_counted = bin
-            .as_any()
-            .downcast_ref::<Bin<C>>()
-            .expect("type mismatch")
-            .load(id, slot_generation, guard)?;
+        let ref_counted =
+            bin.as_any()
+                .downcast_ref::<Bin<C>>()?
+                .load(id, slot_generation, guard)?;
 
         Some(ref_counted.value.map_as())
     }
@@ -2601,23 +2599,19 @@ pub struct AnyRef {
 }
 
 impl AnyRef {
-    /// Returns a [`Ref<T>`] if the underlying reference points to a `T`.
+    /// Returns a [`Ref<T>`].
+    ///
+    /// This function does not do any type checking. If `T` is not the correct
+    /// type, attempting to load the underyling value will fail.
     #[must_use]
-    pub fn downcast_ref<T>(&self) -> Option<Ref<T>>
+    pub const fn downcast_ref<T>(&self) -> Ref<T>
     where
         T: Collectable,
     {
-        let correct_type = GlobalCollector::get()
-            .info
-            .type_indexes
-            .read()
-            .get(&TypeId::of::<T>())
-            == Some(&self.type_index);
-
-        correct_type.then_some(Ref {
+        Ref {
             any: *self,
             _t: PhantomData,
-        })
+        }
     }
 
     /// Returns a [`Root<T>`] if the underlying reference points to a `T` that
@@ -2627,7 +2621,7 @@ impl AnyRef {
     where
         T: Collectable,
     {
-        self.downcast_ref().and_then(|r| r.as_root(guard))
+        self.downcast_ref().as_root(guard)
     }
 
     /// Loads a reference to the underlying data. Returns `None` if the data has
@@ -2637,7 +2631,7 @@ impl AnyRef {
     where
         T: Collectable,
     {
-        self.downcast_ref().and_then(|r| r.load(guard))
+        self.downcast_ref().load(guard)
     }
 
     /// Returns a reference to the result of [`MapAs::map_as()`], if the value
@@ -2729,3 +2723,6 @@ impl Hash for AnyRef {
         self.bin_id.hash(state);
     }
 }
+
+#[cfg(test)]
+mod tests;
