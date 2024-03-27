@@ -1550,14 +1550,33 @@ where
 
     /// Returns an untyped "weak" reference erased to this root.
     #[must_use]
-    pub fn downgrade_any(&self) -> AnyRef {
+    pub const fn downgrade_any(&self) -> AnyRef {
         self.reference.as_any()
     }
 
-    /// Returns this reference as an untyped reference.
+    /// Returns an untyped root reference.
     #[must_use]
-    pub fn as_any(&self) -> AnyRef {
-        self.reference.as_any()
+    pub fn to_any_root(&self) -> AnyRoot {
+        let roots = &self.as_rooted().roots;
+        roots.fetch_add(1, Ordering::Acquire);
+
+        AnyRoot {
+            rooted: self.data.cast(),
+            roots,
+            any: self.reference.as_any(),
+        }
+    }
+
+    /// Returns this root as an untyped root.
+    pub fn into_any_root(self) -> AnyRoot {
+        // We transfer ownership of this reference to the AnyRoot, so we want to
+        // avoid calling drop on `self`.
+        let this = ManuallyDrop::new(self);
+        AnyRoot {
+            rooted: this.data.cast(),
+            roots: &this.as_rooted().roots,
+            any: this.reference.as_any(),
+        }
     }
 
     fn as_rooted(&self) -> &Rooted<T> {
@@ -1792,7 +1811,7 @@ where
 
     /// Returns this reference as an untyped reference.
     #[must_use]
-    pub fn as_any(self) -> AnyRef {
+    pub const fn as_any(self) -> AnyRef {
         self.any
     }
 
@@ -2665,6 +2684,78 @@ impl TypeIndex {
     }
 }
 
+/// A type-erased root garbage collected reference.
+#[derive(Eq, PartialEq, PartialOrd, Ord)]
+pub struct AnyRoot {
+    rooted: *const (),
+    roots: *const AtomicU64,
+    any: AnyRef,
+}
+
+impl AnyRoot {
+    /// Loads a reference to the underlying data. Returns `None` if `T` is not
+    /// the type of the underlying data.
+    pub fn load<T>(&self) -> Option<&T>
+    where
+        T: Collectable,
+    {
+        if TypeIndex::of::<T>() == self.any.type_index {
+            let rooted = unsafe { &*self.rooted.cast::<Rooted<T>>() };
+            Some(&rooted.value)
+        } else {
+            None
+        }
+    }
+
+    /// Returns an untyped "weak" reference to this root.
+    pub const fn as_any(&self) -> AnyRef {
+        self.any
+    }
+}
+
+impl Clone for AnyRoot {
+    fn clone(&self) -> Self {
+        unsafe { &*self.roots }.fetch_add(1, Ordering::Acquire);
+        Self {
+            rooted: self.rooted,
+            roots: self.roots,
+            any: self.any,
+        }
+    }
+}
+
+impl Drop for AnyRoot {
+    fn drop(&mut self) {
+        if unsafe { &*self.roots }.fetch_sub(1, Ordering::Acquire) == 1 {
+            CollectorCommand::schedule_collect_if_needed();
+        }
+    }
+}
+
+impl Hash for AnyRoot {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.any.hash(state);
+    }
+}
+
+impl<T> From<Root<T>> for AnyRoot
+where
+    T: Collectable,
+{
+    fn from(value: Root<T>) -> Self {
+        value.into_any_root()
+    }
+}
+
+// SAFETY: AnyRoot's usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Root<T>` ensures proper Send + Sync
+// behavior in its memory accesses.
+unsafe impl Send for AnyRoot {}
+// SAFETY: AnyRoot's usage of a pointer prevents auto implementation.
+// `Collectable` requires `Send`, and `Root<T>` ensures proper Send + Sync
+// behavior in its memory accesses.
+unsafe impl Sync for AnyRoot {}
+
 /// A type-erased garbage collected reference.
 #[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct AnyRef {
@@ -2787,7 +2878,7 @@ where
     T: Collectable,
 {
     fn from(value: &'_ Root<T>) -> Self {
-        value.as_any()
+        value.downgrade_any()
     }
 }
 

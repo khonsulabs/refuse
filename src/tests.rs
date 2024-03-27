@@ -43,7 +43,7 @@ use crate::{CollectionGuard, Root};
 fn casting() {
     let guard = CollectionGuard::acquire();
     let value = Root::new(2_u32, &guard);
-    let any = value.as_any();
+    let any = value.downgrade_any();
     assert_eq!(any.downcast_ref().load(&guard), Some(&2_u32));
     assert_eq!(any.downcast_ref::<u16>().load(&guard), None);
 }

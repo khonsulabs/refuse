@@ -185,8 +185,8 @@ impl RootString {
     }
 
     /// Returns a typeless reference to this string.
-    pub fn as_any(&self) -> AnyRef {
-        self.0.as_any()
+    pub const fn downgrade_any(&self) -> AnyRef {
+        self.0.downgrade_any()
     }
 
     /// Returns the number of root references to this string, `self` included.
