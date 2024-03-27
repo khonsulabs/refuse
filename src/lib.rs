@@ -581,7 +581,7 @@ impl GlobalCollector {
 static COLLECTOR: OnceLock<GlobalCollector> = OnceLock::new();
 
 thread_local! {
-    static THREAD_POOL: RefCell<OnceCell<ThreadPool>> = RefCell::new(OnceCell::new());
+    static THREAD_POOL: RefCell<OnceCell<ThreadPool>> = const { RefCell::new(OnceCell::new()) };
 }
 
 #[derive(Default)]
@@ -982,9 +982,35 @@ impl CollectionGuard<'_> {
     /// If any other guards are currently held by this thread, this function
     /// does nothing.
     pub fn yield_to_collector(&mut self) {
+        self.coordinated_yield(|yielder| yielder.wait());
+    }
+
+    /// Perform a coordinated yield to the collector, if needed.
+    ///
+    /// This function is useful if the code yielding has held locks that the
+    /// garbage collector might need during the tracing process. Instead of
+    /// always unlocking the locks before calling
+    /// [`Self::yield_to_collector()`], this function can be used to only
+    /// release the local locks when yielding.
+    ///
+    /// If this function detects that it should yield to the collector,
+    /// `yielder` will be invoked. The function can do whatever else is needed
+    /// before waiting for the collector to finish, and then invoke
+    /// [`Yielder::wait()`].
+    ///
+    /// If this function does not yield, `yielder` is not invoked.
+    ///
+    /// This function will not yield unless the garbage collector is trying to
+    /// acquire this thread's lock. Because of this, it is a fairly efficient
+    /// function to invoke. To minimize collection pauses, long-held guards
+    /// should call this function regularly.
+    ///
+    /// If any other guards are currently held by this thread, this function
+    /// does nothing.
+    pub fn coordinated_yield(&mut self, yielder: impl FnOnce(Yielder<'_>) -> YieldComplete) {
         // We only need to attempt yielding if we are the outermost guard.
         if ThreadPool::current_depth() == 1 && self.collector.release_reader_if_collecting() {
-            self.collector.acquire_reader();
+            let YieldComplete = yielder(Yielder(&mut self.collector));
         }
     }
 
@@ -1041,6 +1067,21 @@ impl<'a> AsMut<CollectionGuard<'a>> for CollectionGuard<'a> {
         self
     }
 }
+
+/// A pending yield to the garbage collector.
+pub struct Yielder<'a>(&'a mut CollectorReadGuard);
+
+impl Yielder<'_> {
+    /// Waits for the garbage collector to finish the current collection.
+    pub fn wait(self) -> YieldComplete {
+        self.0.acquire_reader();
+        YieldComplete
+    }
+}
+
+/// A marker indicating that a [coordinated
+/// yield](CollectionGuard::coordinated_yield) has completed.
+pub struct YieldComplete;
 
 /// A type that can be garbage collected.
 ///
