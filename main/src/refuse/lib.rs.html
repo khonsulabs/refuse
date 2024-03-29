@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (47ecded35 2024-03-26)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (c9f8f3438 2024-03-27)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -2895,6 +2895,19 @@
 <a href="#2893" id="2893">2893</a>
 <a href="#2894" id="2894">2894</a>
 <a href="#2895" id="2895">2895</a>
+<a href="#2896" id="2896">2896</a>
+<a href="#2897" id="2897">2897</a>
+<a href="#2898" id="2898">2898</a>
+<a href="#2899" id="2899">2899</a>
+<a href="#2900" id="2900">2900</a>
+<a href="#2901" id="2901">2901</a>
+<a href="#2902" id="2902">2902</a>
+<a href="#2903" id="2903">2903</a>
+<a href="#2904" id="2904">2904</a>
+<a href="#2905" id="2905">2905</a>
+<a href="#2906" id="2906">2906</a>
+<a href="#2907" id="2907">2907</a>
+<a href="#2908" id="2908">2908</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -3048,7 +3061,7 @@
 /// implementation invoked.
 </span><span class="kw">pub mod </span>architecture {}
 
-<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+<span class="attr">#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 </span><span class="kw">struct </span>CollectorThreadId(u32);
 
 <span class="kw">impl </span>CollectorThreadId {
@@ -3126,7 +3139,6 @@
 <span class="kw">struct </span>TraceRequest {
     thread: CollectorThreadId,
     bins: Arc&lt;<span class="kw">dyn </span>AnyBin&gt;,
-    mark_bits: u8,
     mark_one_sender: Arc&lt;Sender&lt;MarkRequest&gt;&gt;,
 }
 
@@ -3135,7 +3147,6 @@
     type_index: TypeIndex,
     slot_generation: u32,
     bin_id: BinId,
-    mark_bits: u8,
     mark_one_sender: Arc&lt;Sender&lt;MarkRequest&gt;&gt;,
 }
 
@@ -3200,11 +3211,9 @@
                     <span class="kw">let </span>trace_receiver = trace_receiver.clone();
                     <span class="kw">move </span>|| {
                         <span class="kw">while let </span><span class="prelude-val">Ok</span>(request) = trace_receiver.recv() {
-                            request.bins.trace(<span class="kw-2">&amp;mut </span>Tracer::new(
-                                request.thread,
-                                <span class="kw-2">&amp;</span>request.mark_one_sender,
-                                request.mark_bits,
-                            ));
+                            request
+                                .bins
+                                .trace(<span class="kw-2">&amp;mut </span>Tracer::new(request.thread, <span class="kw-2">&amp;</span>request.mark_one_sender));
                         }
                     }
                 });
@@ -3365,7 +3374,6 @@
                     .send(TraceRequest {
                         thread: <span class="kw-2">*</span>id,
                         bins: by_type.field(i).expect(<span class="string">"length checked"</span>).value.clone(),
-                        mark_bits: <span class="self">self</span>.mark_bits,
                         mark_one_sender: mark_one_sender.clone(),
                     })
                     .expect(<span class="string">"tracer stopped"</span>);
@@ -3378,7 +3386,6 @@
                 type_index,
                 slot_generation,
                 bin_id,
-                mark_bits,
                 mark_one_sender,
             } = {
                 <span class="kw">if </span>Arc::strong_count(<span class="kw-2">&amp;</span>mark_one_sender) == <span class="number">1 </span>{
@@ -3402,11 +3409,11 @@
                 .get(<span class="kw-2">&amp;</span>type_index)
                 .expect(<span class="string">"areas are never deallocated"</span>)
                 .clone();
-            <span class="kw">if </span>bins.mark_one(mark_bits, slot_generation, bin_id) {
+            <span class="kw">if </span>bins.mark_one(<span class="self">self</span>.mark_bits, slot_generation, bin_id) {
                 bins.trace_one(
                     slot_generation,
                     bin_id,
-                    <span class="kw-2">&amp;mut </span>Tracer::new(thread, <span class="kw-2">&amp;</span>mark_one_sender, <span class="self">self</span>.mark_bits),
+                    <span class="kw-2">&amp;mut </span>Tracer::new(thread, <span class="kw-2">&amp;</span>mark_one_sender),
                 );
             }
         }
@@ -3698,6 +3705,11 @@
         this
     }
 
+    <span class="kw">fn </span>try_acquire() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>global = <span class="kw-2">&amp;</span>GlobalCollector::get().info;
+        global.reader_state.read().then_some(<span class="self">Self </span>{ global })
+    }
+
     <span class="kw">fn </span>acquire_recursive() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>this = <span class="self">Self </span>{
             global: <span class="kw-2">&amp;</span>GlobalCollector::get().info,
@@ -3810,6 +3822,32 @@
             collector,
             thread: Guarded::Thread(thread),
         }
+    }
+
+    <span class="doccomment">/// Acquires a lock that prevents the garbage collector from running.
+    ///
+    /// This guard is used to provide read-only access to garbage collected
+    /// allocations.
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if this function is called outside of code executed
+    /// by [`collected()`].
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>try_acquire() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>thread = ThreadPool::get();
+
+        <span class="kw">let </span>depth = thread.push_guard();
+
+        <span class="kw">let </span>collector = <span class="kw">if </span>depth == <span class="number">0 </span>{
+            CollectorReadGuard::try_acquire()<span class="question-mark">?
+        </span>} <span class="kw">else </span>{
+            CollectorReadGuard::acquire_recursive()
+        };
+        <span class="prelude-val">Some</span>(<span class="self">Self </span>{
+            collector,
+            thread: Guarded::Thread(thread),
+        })
     }
 }
 
@@ -4338,19 +4376,13 @@
 /// [`Ref&lt;T&gt;`]s they contain.
 </span><span class="kw">pub struct </span>Tracer&lt;<span class="lifetime">'a</span>&gt; {
     tracing_thread: CollectorThreadId,
-    mark_bit: u8,
     mark_one_sender: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Arc&lt;Sender&lt;MarkRequest&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Tracer&lt;<span class="lifetime">'a</span>&gt; {
-    <span class="kw">fn </span>new(
-        thread: CollectorThreadId,
-        mark_one_sender: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Arc&lt;Sender&lt;MarkRequest&gt;&gt;,
-        mark_bit: u8,
-    ) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(thread: CollectorThreadId, mark_one_sender: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Arc&lt;Sender&lt;MarkRequest&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tracing_thread: thread,
-            mark_bit,
             mark_one_sender,
         }
     }
@@ -4365,7 +4397,6 @@
                 type_index: collectable.type_index,
                 slot_generation: collectable.slot_generation,
                 bin_id: collectable.bin_id,
-                mark_bits: <span class="self">self</span>.mark_bit,
                 mark_one_sender: <span class="self">self</span>.mark_one_sender.clone(),
             })
             .assert(<span class="string">"marker thread not running"</span>);
@@ -5053,7 +5084,7 @@
 
     <span class="kw">fn </span>mark_one(<span class="kw-2">&amp;</span><span class="self">self</span>, mark_bits: u8, slot_generation: u32, bin: BinId) -&gt; bool {
         <span class="kw">let </span>slot = <span class="kw-2">&amp;</span><span class="self">self</span>.slabs[bin.slab() <span class="kw">as </span>usize].slots[usize::from(bin.slot())];
-        slot.state.mark(mark_bits, slot_generation)
+        slot.state.mark(mark_bits, slot_generation) &amp;&amp; T::MAY_CONTAIN_REFERENCES
     }
 
     <span class="kw">fn </span>sweep(<span class="kw-2">&amp;</span><span class="self">self</span>, mark_bits: u8) -&gt; usize {
@@ -5142,7 +5173,7 @@
     }
 }
 
-<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 </span><span class="kw">struct </span>BinId(u32);
 
 <span class="kw">impl </span>BinId {
@@ -5311,7 +5342,7 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>this: Box&lt;<span class="self">Self</span>&gt; =
             <span class="kw">unsafe </span>{ Box::from_raw(alloc_zeroed(Layout::new::&lt;<span class="self">Self</span>&gt;()).cast()) };
         this.slots[<span class="number">0</span>] = Slot {
-            state: SlotState::new_allocated(T::MAY_CONTAIN_REFERENCES),
+            state: SlotState::new_allocated(),
             value: UnsafeCell::new(SlotData {
                 allocated: ManuallyDrop::new(first_value),
             }),
@@ -5410,15 +5441,10 @@
 
 <span class="kw">impl </span>SlotState {
     <span class="kw">const </span>ALLOCATED: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">33</span>;
-    <span class="kw">const </span>MARK_OFFSET: u32 = <span class="number">35</span>;
-    <span class="kw">const </span>SHOULD_TRACE: u64 = <span class="number">1 </span>&lt;&lt; <span class="number">34</span>;
+    <span class="kw">const </span>MARK_OFFSET: u32 = <span class="number">34</span>;
 
-    <span class="kw">const fn </span>new_allocated(should_trace: bool) -&gt; <span class="self">Self </span>{
-        <span class="kw">if </span>should_trace {
-            <span class="self">Self</span>(AtomicU64::new(<span class="self">Self</span>::ALLOCATED | <span class="self">Self</span>::SHOULD_TRACE))
-        } <span class="kw">else </span>{
-            <span class="self">Self</span>(AtomicU64::new(<span class="self">Self</span>::ALLOCATED))
-        }
+    <span class="kw">const fn </span>new_allocated() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(AtomicU64::new(<span class="self">Self</span>::ALLOCATED))
     }
 
     <span class="kw">fn </span>generation(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;u32&gt; {
@@ -5473,7 +5499,7 @@
         state |= mark_bits &lt;&lt; <span class="self">Self</span>::MARK_OFFSET;
 
         <span class="self">self</span>.<span class="number">0</span>.store(state, Ordering::Release);
-        state &amp; <span class="self">Self</span>::SHOULD_TRACE != <span class="number">0
+        <span class="bool-val">true
     </span>}
 
     <span class="kw">fn </span>sweep(<span class="kw-2">&amp;</span><span class="self">self</span>, mark_bits: u8) -&gt; SlotSweepStatus {
@@ -5559,7 +5585,7 @@
     GlobalCollector::get().info.wait_for_collection(now);
 }
 
-<span class="attr">#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+<span class="attr">#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 </span><span class="kw">struct </span>TypeIndex(u32);
 
 <span class="kw">impl </span>TypeIndex {
@@ -5654,7 +5680,7 @@
 </span><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>AnyRoot {}
 
 <span class="doccomment">/// A type-erased garbage collected reference.
-</span><span class="attr">#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+</span><span class="attr">#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 </span><span class="kw">pub struct </span>AnyRef {
     bin_id: BinId,
     creating_thread: CollectorThreadId,
