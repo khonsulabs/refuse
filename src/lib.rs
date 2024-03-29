@@ -151,7 +151,7 @@ pub use refuse_macros::{MapAs, Trace};
 /// implementation invoked.
 pub mod architecture {}
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 struct CollectorThreadId(u32);
 
 impl CollectorThreadId {
@@ -229,7 +229,6 @@ struct CollectorThreadChannels {
 struct TraceRequest {
     thread: CollectorThreadId,
     bins: Arc<dyn AnyBin>,
-    mark_bits: u8,
     mark_one_sender: Arc<Sender<MarkRequest>>,
 }
 
@@ -238,7 +237,6 @@ struct MarkRequest {
     type_index: TypeIndex,
     slot_generation: u32,
     bin_id: BinId,
-    mark_bits: u8,
     mark_one_sender: Arc<Sender<MarkRequest>>,
 }
 
@@ -303,11 +301,9 @@ impl Collector {
                     let trace_receiver = trace_receiver.clone();
                     move || {
                         while let Ok(request) = trace_receiver.recv() {
-                            request.bins.trace(&mut Tracer::new(
-                                request.thread,
-                                &request.mark_one_sender,
-                                request.mark_bits,
-                            ));
+                            request
+                                .bins
+                                .trace(&mut Tracer::new(request.thread, &request.mark_one_sender));
                         }
                     }
                 });
@@ -468,7 +464,6 @@ impl Collector {
                     .send(TraceRequest {
                         thread: *id,
                         bins: by_type.field(i).expect("length checked").value.clone(),
-                        mark_bits: self.mark_bits,
                         mark_one_sender: mark_one_sender.clone(),
                     })
                     .expect("tracer stopped");
@@ -481,7 +476,6 @@ impl Collector {
                 type_index,
                 slot_generation,
                 bin_id,
-                mark_bits,
                 mark_one_sender,
             } = {
                 if Arc::strong_count(&mark_one_sender) == 1 {
@@ -505,11 +499,11 @@ impl Collector {
                 .get(&type_index)
                 .expect("areas are never deallocated")
                 .clone();
-            if bins.mark_one(mark_bits, slot_generation, bin_id) {
+            if bins.mark_one(self.mark_bits, slot_generation, bin_id) {
                 bins.trace_one(
                     slot_generation,
                     bin_id,
-                    &mut Tracer::new(thread, &mark_one_sender, self.mark_bits),
+                    &mut Tracer::new(thread, &mark_one_sender),
                 );
             }
         }
@@ -801,6 +795,11 @@ impl CollectorReadGuard {
         this
     }
 
+    fn try_acquire() -> Option<Self> {
+        let global = &GlobalCollector::get().info;
+        global.reader_state.read().then_some(Self { global })
+    }
+
     fn acquire_recursive() -> Self {
         let this = Self {
             global: &GlobalCollector::get().info,
@@ -913,6 +912,32 @@ impl CollectionGuard<'static> {
             collector,
             thread: Guarded::Thread(thread),
         }
+    }
+
+    /// Acquires a lock that prevents the garbage collector from running.
+    ///
+    /// This guard is used to provide read-only access to garbage collected
+    /// allocations.
+    ///
+    /// # Panics
+    ///
+    /// A panic will occur if this function is called outside of code executed
+    /// by [`collected()`].
+    #[must_use]
+    pub fn try_acquire() -> Option<Self> {
+        let thread = ThreadPool::get();
+
+        let depth = thread.push_guard();
+
+        let collector = if depth == 0 {
+            CollectorReadGuard::try_acquire()?
+        } else {
+            CollectorReadGuard::acquire_recursive()
+        };
+        Some(Self {
+            collector,
+            thread: Guarded::Thread(thread),
+        })
     }
 }
 
@@ -1441,19 +1466,13 @@ impl<T> AsRef<Ref<T>> for Ref<T> {
 /// [`Ref<T>`]s they contain.
 pub struct Tracer<'a> {
     tracing_thread: CollectorThreadId,
-    mark_bit: u8,
     mark_one_sender: &'a Arc<Sender<MarkRequest>>,
 }
 
 impl<'a> Tracer<'a> {
-    fn new(
-        thread: CollectorThreadId,
-        mark_one_sender: &'a Arc<Sender<MarkRequest>>,
-        mark_bit: u8,
-    ) -> Self {
+    fn new(thread: CollectorThreadId, mark_one_sender: &'a Arc<Sender<MarkRequest>>) -> Self {
         Self {
             tracing_thread: thread,
-            mark_bit,
             mark_one_sender,
         }
     }
@@ -1468,7 +1487,6 @@ impl<'a> Tracer<'a> {
                 type_index: collectable.type_index,
                 slot_generation: collectable.slot_generation,
                 bin_id: collectable.bin_id,
-                mark_bits: self.mark_bit,
                 mark_one_sender: self.mark_one_sender.clone(),
             })
             .assert("marker thread not running");
@@ -2156,7 +2174,7 @@ where
 
     fn mark_one(&self, mark_bits: u8, slot_generation: u32, bin: BinId) -> bool {
         let slot = &self.slabs[bin.slab() as usize].slots[usize::from(bin.slot())];
-        slot.state.mark(mark_bits, slot_generation)
+        slot.state.mark(mark_bits, slot_generation) && T::MAY_CONTAIN_REFERENCES
     }
 
     fn sweep(&self, mark_bits: u8) -> usize {
@@ -2245,7 +2263,7 @@ where
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 struct BinId(u32);
 
 impl BinId {
@@ -2414,7 +2432,7 @@ impl<T> Slab<T> {
         let mut this: Box<Self> =
             unsafe { Box::from_raw(alloc_zeroed(Layout::new::<Self>()).cast()) };
         this.slots[0] = Slot {
-            state: SlotState::new_allocated(T::MAY_CONTAIN_REFERENCES),
+            state: SlotState::new_allocated(),
             value: UnsafeCell::new(SlotData {
                 allocated: ManuallyDrop::new(first_value),
             }),
@@ -2513,15 +2531,10 @@ struct SlotState(AtomicU64);
 
 impl SlotState {
     const ALLOCATED: u64 = 1 << 33;
-    const MARK_OFFSET: u32 = 35;
-    const SHOULD_TRACE: u64 = 1 << 34;
+    const MARK_OFFSET: u32 = 34;
 
-    const fn new_allocated(should_trace: bool) -> Self {
-        if should_trace {
-            Self(AtomicU64::new(Self::ALLOCATED | Self::SHOULD_TRACE))
-        } else {
-            Self(AtomicU64::new(Self::ALLOCATED))
-        }
+    const fn new_allocated() -> Self {
+        Self(AtomicU64::new(Self::ALLOCATED))
     }
 
     fn generation(&self) -> Option<u32> {
@@ -2576,7 +2589,7 @@ impl SlotState {
         state |= mark_bits << Self::MARK_OFFSET;
 
         self.0.store(state, Ordering::Release);
-        state & Self::SHOULD_TRACE != 0
+        true
     }
 
     fn sweep(&self, mark_bits: u8) -> SlotSweepStatus {
@@ -2662,7 +2675,7 @@ fn collect_unchecked() {
     GlobalCollector::get().info.wait_for_collection(now);
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct TypeIndex(u32);
 
 impl TypeIndex {
@@ -2757,7 +2770,7 @@ unsafe impl Send for AnyRoot {}
 unsafe impl Sync for AnyRoot {}
 
 /// A type-erased garbage collected reference.
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct AnyRef {
     bin_id: BinId,
     creating_thread: CollectorThreadId,

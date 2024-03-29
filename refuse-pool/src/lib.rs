@@ -408,10 +408,14 @@ impl From<String> for RefString {
 
 impl Debug for RefString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(s) = self.load(&CollectionGuard::acquire()) {
-            Debug::fmt(s, f)
+        if let Some(guard) = CollectionGuard::try_acquire() {
+            if let Some(s) = self.load(&guard) {
+                Debug::fmt(s, f)
+            } else {
+                f.write_str("string freed")
+            }
         } else {
-            f.write_str("string freed")
+            f.write_str("RefString(<gc locked>)")
         }
     }
 }
