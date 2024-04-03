@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (c9f8f3438 2024-03-27)" data-channel="nightly" data-search-js="search-42d8da7a6b9792c2.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (88c2f4f5f 2024-04-02)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -2908,6 +2908,38 @@
 <a href="#2906" id="2906">2906</a>
 <a href="#2907" id="2907">2907</a>
 <a href="#2908" id="2908">2908</a>
+<a href="#2909" id="2909">2909</a>
+<a href="#2910" id="2910">2910</a>
+<a href="#2911" id="2911">2911</a>
+<a href="#2912" id="2912">2912</a>
+<a href="#2913" id="2913">2913</a>
+<a href="#2914" id="2914">2914</a>
+<a href="#2915" id="2915">2915</a>
+<a href="#2916" id="2916">2916</a>
+<a href="#2917" id="2917">2917</a>
+<a href="#2918" id="2918">2918</a>
+<a href="#2919" id="2919">2919</a>
+<a href="#2920" id="2920">2920</a>
+<a href="#2921" id="2921">2921</a>
+<a href="#2922" id="2922">2922</a>
+<a href="#2923" id="2923">2923</a>
+<a href="#2924" id="2924">2924</a>
+<a href="#2925" id="2925">2925</a>
+<a href="#2926" id="2926">2926</a>
+<a href="#2927" id="2927">2927</a>
+<a href="#2928" id="2928">2928</a>
+<a href="#2929" id="2929">2929</a>
+<a href="#2930" id="2930">2930</a>
+<a href="#2931" id="2931">2931</a>
+<a href="#2932" id="2932">2932</a>
+<a href="#2933" id="2933">2933</a>
+<a href="#2934" id="2934">2934</a>
+<a href="#2935" id="2935">2935</a>
+<a href="#2936" id="2936">2936</a>
+<a href="#2937" id="2937">2937</a>
+<a href="#2938" id="2938">2938</a>
+<a href="#2939" id="2939">2939</a>
+<a href="#2940" id="2940">2940</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -3335,7 +3367,9 @@
         <span class="prelude-val">Some</span>(
             thread_bins
                 .iter()
-                .map(|entry| (<span class="kw-2">*</span>entry.key(), <span class="kw">unsafe </span>{ entry.value.bins.assume_mut() }))
+                <span class="comment">// SAFETY: We have acquired all of the locks, so we can now gain
+                // exclusive access safely.
+                </span>.map(|entry| (<span class="kw-2">*</span>entry.key(), <span class="kw">unsafe </span>{ entry.value.bins.assume_mut() }))
                 .collect(),
         )
     }
@@ -3492,22 +3526,41 @@
 </span><span class="kw">struct </span>UnsafeBins(UnsafeCell&lt;ManuallyDrop&lt;Bins&gt;&gt;);
 
 <span class="kw">impl </span>UnsafeBins {
-    <span class="kw">unsafe fn </span>assume_readable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
+    <span class="doccomment">/// # Safety
+    ///
+    /// The caller of this function must ensure that no exclusive references
+    /// exist to this data.
+    </span><span class="kw">unsafe fn </span>assume_readable(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
         <span class="kw-2">&amp;*</span><span class="self">self</span>.<span class="number">0</span>.get()
     }
 
-    <span class="attr">#[allow(clippy::mut_from_ref)]
+    <span class="doccomment">/// # Safety
+    ///
+    /// The caller of this function must ensure that no other references exist
+    /// to this data. For the design of this collector, this function should
+    /// only be called by the garbage collector thread after acquiring the lock
+    /// that contains this structure.
+    </span><span class="attr">#[allow(clippy::mut_from_ref)]
     </span><span class="kw">unsafe fn </span>assume_mut(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Bins {
         <span class="kw-2">&amp;mut *</span><span class="self">self</span>.<span class="number">0</span>.get()
     }
 }
 
-<span class="kw">unsafe impl </span>Send <span class="kw">for </span>UnsafeBins {}
-<span class="kw">unsafe impl </span>Sync <span class="kw">for </span>UnsafeBins {}
+<span class="comment">// SAFETY: Auto-implementation is prevented by UnsafeCell. The contained type
+// would be `Send`, and this crate takes care to ensure correct thread-safe
+// access to the contents of the UnsafeCell.
+</span><span class="kw">unsafe impl </span>Send <span class="kw">for </span>UnsafeBins {}
+<span class="comment">// SAFETY: Auto-implementation is prevented by UnsafeCell. The contained type
+// would be `Send`, and this crate takes care to ensure correct thread-safe
+// access to the contents of the UnsafeCell.
+</span><span class="kw">unsafe impl </span>Sync <span class="kw">for </span>UnsafeBins {}
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>UnsafeBins {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">unsafe </span>{
+        <span class="comment">// SAFETY: We never leave the contents of the unsafe cell in an invalid
+        // state, making it safe to invoke the drop function without any extra
+        // checks.
+        </span><span class="kw">unsafe </span>{
             ManuallyDrop::drop(<span class="self">self</span>.<span class="number">0</span>.get_mut());
         }
     }
@@ -3854,7 +3907,10 @@
 <span class="kw">impl </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt; {
     <span class="attr">#[allow(clippy::unused_self)]
     </span><span class="kw">fn </span>bins_for&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="self">self</span>, bins: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>UnsafeBins) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Bins {
-        <span class="kw">unsafe </span>{ bins.assume_readable() }
+        <span class="comment">// SAFETY: We have read access ensuring the collector can't call
+        // `assume_mut()` while `self` exists. We can use this knowledge to
+        // safely create a reference tied to `self`'s lifetime.
+        </span><span class="kw">unsafe </span>{ bins.assume_readable() }
     }
 
     <span class="kw">fn </span>bins(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Bins {
@@ -5623,7 +5679,11 @@
         </span>T: Collectable,
     {
         <span class="kw">if </span>TypeIndex::of::&lt;T&gt;() == <span class="self">self</span>.any.type_index {
-            <span class="kw">let </span>rooted = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.rooted.cast::&lt;Rooted&lt;T&gt;&gt;() };
+            <span class="comment">// SAFETY: `self` has a root reference to the underlying data,
+            // ensuring that it cannot be collected while `self` exists. We've
+            // verified that `T` is the same underlying type. We can return a
+            // reference bound to `self`'s lifetime safely.
+            </span><span class="kw">let </span>rooted = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.rooted.cast::&lt;Rooted&lt;T&gt;&gt;() };
             <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>rooted.value)
         } <span class="kw">else </span>{
             <span class="prelude-val">None
@@ -5638,7 +5698,9 @@
 
 <span class="kw">impl </span>Clone <span class="kw">for </span>AnyRoot {
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.roots }.fetch_add(<span class="number">1</span>, Ordering::Acquire);
+        <span class="comment">// SAFETY: `self` has a root reference to the underlying data, ensuring
+        // that it cannot be collected while `self` exists.
+        </span><span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.roots }.fetch_add(<span class="number">1</span>, Ordering::Acquire);
         <span class="self">Self </span>{
             rooted: <span class="self">self</span>.rooted,
             roots: <span class="self">self</span>.roots,
@@ -5649,7 +5711,9 @@
 
 <span class="kw">impl </span>Drop <span class="kw">for </span>AnyRoot {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.roots }.fetch_sub(<span class="number">1</span>, Ordering::Acquire) == <span class="number">1 </span>{
+        <span class="comment">// SAFETY: `self` has a root reference to the underlying data, ensuring
+        // that it cannot be collected while `self` exists.
+        </span><span class="kw">if unsafe </span>{ <span class="kw-2">&amp;*</span><span class="self">self</span>.roots }.fetch_sub(<span class="number">1</span>, Ordering::Acquire) == <span class="number">1 </span>{
             CollectorCommand::schedule_collect_if_needed();
         }
     }
