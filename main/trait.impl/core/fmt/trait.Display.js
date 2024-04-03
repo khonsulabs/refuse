@@ -1,3 +1,4 @@
 (function() {var implementors = {
-"refuse":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"refuse/struct.WouldDeadlock.html\" title=\"struct refuse::WouldDeadlock\">WouldDeadlock</a>"]]
+"refuse":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"refuse/struct.WouldDeadlock.html\" title=\"struct refuse::WouldDeadlock\">WouldDeadlock</a>"]],
+"refuse_pool":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"refuse_pool/struct.RootString.html\" title=\"struct refuse_pool::RootString\">RootString</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

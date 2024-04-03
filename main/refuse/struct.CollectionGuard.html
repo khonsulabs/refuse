@@ -15,18 +15,19 @@ the lock.</li>
 IO, reading from a channel, or any other operation that may pause the
 current thread. <a href="struct.CollectionGuard.html#method.while_unlocked" title="method refuse::CollectionGuard::while_unlocked"><code>CollectionGuard::while_unlocked()</code></a> can be used to
 temporarily release a guard during a long operation.</p>
-</div></details><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-CollectionGuard%3C'static%3E" class="impl"><a class="src rightside" href="../src/refuse/lib.rs.html#911-963">source</a><a href="#impl-CollectionGuard%3C'static%3E" class="anchor">§</a><h3 class="code-header">impl <a class="struct" href="struct.CollectionGuard.html" title="struct refuse::CollectionGuard">CollectionGuard</a>&lt;'static&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.acquire" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#922-936">source</a><h4 class="code-header">pub fn <a href="#method.acquire" class="fn">acquire</a>() -&gt; Self</h4></section></summary><div class="docblock"><p>Acquires a lock that prevents the garbage collector from running.</p>
+</div></details><h2 id="implementations" class="section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-CollectionGuard%3C'static%3E" class="impl"><a class="src rightside" href="../src/refuse/lib.rs.html#911-963">source</a><a href="#impl-CollectionGuard%3C'static%3E" class="anchor">§</a><h3 class="code-header">impl <a class="struct" href="struct.CollectionGuard.html" title="struct refuse::CollectionGuard">CollectionGuard</a>&lt;'static&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.acquire" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#920-934">source</a><h4 class="code-header">pub fn <a href="#method.acquire" class="fn">acquire</a>() -&gt; Self</h4></section></summary><div class="docblock"><p>Acquires a lock that prevents the garbage collector from running.</p>
 <p>This guard is used to provide read-only access to garbage collected
 allocations.</p>
-<h5 id="panics"><a class="doc-anchor" href="#panics">§</a>Panics</h5>
-<p>A panic will occur if this function is called outside of code executed
-by [<code>collected()</code>].</p>
-</div></details><details class="toggle method-toggle" open><summary><section id="method.try_acquire" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#948-962">source</a><h4 class="code-header">pub fn <a href="#method.try_acquire" class="fn">try_acquire</a>() -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;Self&gt;</h4></section></summary><div class="docblock"><p>Acquires a lock that prevents the garbage collector from running.</p>
+<p>It is safe to acquire multiple guards on the same thread. The collector
+will only be able to run when all guards have been released.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.try_acquire" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#948-962">source</a><h4 class="code-header">pub fn <a href="#method.try_acquire" class="fn">try_acquire</a>() -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;Self&gt;</h4></section></summary><div class="docblock"><p>Tries to acquire a lock that prevents the garbage collector from
+running.</p>
+<p>The function will return None if the collector is attempting to run
+garbage collection, and this thread is not already guarded.</p>
 <p>This guard is used to provide read-only access to garbage collected
 allocations.</p>
-<h5 id="panics-1"><a class="doc-anchor" href="#panics-1">§</a>Panics</h5>
-<p>A panic will occur if this function is called outside of code executed
-by [<code>collected()</code>].</p>
+<p>It is safe to acquire multiple guards on the same thread. The collector
+will only be able to run when all guards have been released.</p>
 </div></details></div></details><details class="toggle implementors-toggle" open><summary><section id="impl-CollectionGuard%3C'_%3E" class="impl"><a class="src rightside" href="../src/refuse/lib.rs.html#965-1100">source</a><a href="#impl-CollectionGuard%3C'_%3E" class="anchor">§</a><h3 class="code-header">impl <a class="struct" href="struct.CollectionGuard.html" title="struct refuse::CollectionGuard">CollectionGuard</a>&lt;'_&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.allocating_in" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#980-986">source</a><h4 class="code-header">pub fn <a href="#method.allocating_in" class="fn">allocating_in</a>&lt;'a&gt;(&amp;self, pool: &amp;'a <a class="struct" href="struct.LocalPool.html" title="struct refuse::LocalPool">LocalPool</a>) -&gt; <a class="struct" href="struct.CollectionGuard.html" title="struct refuse::CollectionGuard">CollectionGuard</a>&lt;'a&gt;</h4></section></summary><div class="docblock"><p>Returns a guard that allocates from <code>pool</code>.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.collect" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#1002-1004">source</a><h4 class="code-header">pub fn <a href="#method.collect" class="fn">collect</a>(&amp;mut self)</h4></section></summary><div class="docblock"><p>Manually invokes the garbage collector.</p>
 <p>This method temporarily releases this guard’s lock and waits for a
@@ -35,7 +36,7 @@ progress, this function will return when the in-progress collection
 completes. Otherwise, the collector is started and this function waits
 until the collection finishes.</p>
 <p>Finally, the guard is reacquired before returning.</p>
-<h5 id="panics-2"><a class="doc-anchor" href="#panics-2">§</a>Panics</h5>
+<h5 id="panics"><a class="doc-anchor" href="#panics">§</a>Panics</h5>
 <p>This function will panic if any other <a href="struct.CollectionGuard.html" title="struct refuse::CollectionGuard"><code>CollectionGuard</code></a>s are held by
 the current thread when invoked.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.try_collect" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#1020-1022">source</a><h4 class="code-header">pub fn <a href="#method.try_collect" class="fn">try_collect</a>(&amp;mut self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="struct.WouldDeadlock.html" title="struct refuse::WouldDeadlock">WouldDeadlock</a>&gt;</h4></section></summary><div class="docblock"><p>Manually invokes the garbage collector.</p>
@@ -76,7 +77,7 @@ should call this function regularly.</p>
 <p>If any other guards are currently held by this thread, this function
 does nothing.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.while_unlocked" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#1072-1074">source</a><h4 class="code-header">pub fn <a href="#method.while_unlocked" class="fn">while_unlocked</a>&lt;R&gt;(&amp;mut self, unlocked: impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/function/trait.FnOnce.html" title="trait core::ops::function::FnOnce">FnOnce</a>() -&gt; R) -&gt; R</h4></section></summary><div class="docblock"><p>Executes <code>unlocked</code> while this guard is temporarily released.</p>
-<h5 id="panics-3"><a class="doc-anchor" href="#panics-3">§</a>Panics</h5>
+<h5 id="panics-1"><a class="doc-anchor" href="#panics-1">§</a>Panics</h5>
 <p>This function will panic if any other <a href="struct.CollectionGuard.html" title="struct refuse::CollectionGuard"><code>CollectionGuard</code></a>s are held by
 the current thread when invoked.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.try_while_unlocked" class="method"><a class="src rightside" href="../src/refuse/lib.rs.html#1082-1095">source</a><h4 class="code-header">pub fn <a href="#method.try_while_unlocked" class="fn">try_while_unlocked</a>&lt;R&gt;(

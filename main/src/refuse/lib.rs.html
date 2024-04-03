@@ -3856,10 +3856,8 @@
     /// This guard is used to provide read-only access to garbage collected
     /// allocations.
     ///
-    /// # Panics
-    ///
-    /// A panic will occur if this function is called outside of code executed
-    /// by [`collected()`].
+    /// It is safe to acquire multiple guards on the same thread. The collector
+    /// will only be able to run when all guards have been released.
     </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>acquire() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>thread = ThreadPool::get();
@@ -3877,15 +3875,17 @@
         }
     }
 
-    <span class="doccomment">/// Acquires a lock that prevents the garbage collector from running.
+    <span class="doccomment">/// Tries to acquire a lock that prevents the garbage collector from
+    /// running.
+    ///
+    /// The function will return None if the collector is attempting to run
+    /// garbage collection, and this thread is not already guarded.
     ///
     /// This guard is used to provide read-only access to garbage collected
     /// allocations.
     ///
-    /// # Panics
-    ///
-    /// A panic will occur if this function is called outside of code executed
-    /// by [`collected()`].
+    /// It is safe to acquire multiple guards on the same thread. The collector
+    /// will only be able to run when all guards have been released.
     </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>try_acquire() -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>thread = ThreadPool::get();

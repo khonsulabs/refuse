@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["refuse"];
+window.ALL_CRATES = ["benchmarks","refuse","refuse_macros","refuse_pool"];

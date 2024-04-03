@@ -1,0 +1,1 @@
+searchState.loadedDescShard("refuse_macros", 0, "Macros for the Refuse garbage collector.")
