@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "refuse"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "crossbeam-utils",
  "flume 0.11.0",
@@ -737,7 +737,7 @@ dependencies = [
 
 [[package]]
 name = "refuse-macros"
-version = "0.1.0"
+version = "0.0.2"
 dependencies = [
  "attribute-derive",
  "manyhow 0.11.1",
@@ -748,7 +748,7 @@ dependencies = [
 
 [[package]]
 name = "refuse-pool"
-version = "0.1.0"
+version = "0.0.2"
 dependencies = [
  "ahash",
  "hashbrown",

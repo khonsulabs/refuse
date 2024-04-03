@@ -1,13 +1,16 @@
 [package]
 name = "refuse-macros"
-version = "0.1.0"
+version = "0.0.2"
+description = "Macros for the Refuse garbage collector"
 edition = "2021"
+rust-version = "1.73.0"
+repository = "https://github.com/khonsulabs/refuse"
+license = "MIT OR Apache-2.0"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-
 syn = "2.0.52"
 manyhow = "0.11.1"
 attribute-derive = { version = "0.9.1" }

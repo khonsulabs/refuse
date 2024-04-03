@@ -425,6 +425,8 @@ impl Collector {
         Some(
             thread_bins
                 .iter()
+                // SAFETY: We have acquired all of the locks, so we can now gain
+                // exclusive access safely.
                 .map(|entry| (*entry.key(), unsafe { entry.value.bins.assume_mut() }))
                 .collect(),
         )
@@ -582,21 +584,40 @@ thread_local! {
 struct UnsafeBins(UnsafeCell<ManuallyDrop<Bins>>);
 
 impl UnsafeBins {
+    /// # Safety
+    ///
+    /// The caller of this function must ensure that no exclusive references
+    /// exist to this data.
     unsafe fn assume_readable(&self) -> &Bins {
         &*self.0.get()
     }
 
+    /// # Safety
+    ///
+    /// The caller of this function must ensure that no other references exist
+    /// to this data. For the design of this collector, this function should
+    /// only be called by the garbage collector thread after acquiring the lock
+    /// that contains this structure.
     #[allow(clippy::mut_from_ref)]
     unsafe fn assume_mut(&self) -> &mut Bins {
         &mut *self.0.get()
     }
 }
 
+// SAFETY: Auto-implementation is prevented by UnsafeCell. The contained type
+// would be `Send`, and this crate takes care to ensure correct thread-safe
+// access to the contents of the UnsafeCell.
 unsafe impl Send for UnsafeBins {}
+// SAFETY: Auto-implementation is prevented by UnsafeCell. The contained type
+// would be `Send`, and this crate takes care to ensure correct thread-safe
+// access to the contents of the UnsafeCell.
 unsafe impl Sync for UnsafeBins {}
 
 impl Drop for UnsafeBins {
     fn drop(&mut self) {
+        // SAFETY: We never leave the contents of the unsafe cell in an invalid
+        // state, making it safe to invoke the drop function without any extra
+        // checks.
         unsafe {
             ManuallyDrop::drop(self.0.get_mut());
         }
@@ -944,6 +965,9 @@ impl CollectionGuard<'static> {
 impl CollectionGuard<'_> {
     #[allow(clippy::unused_self)]
     fn bins_for<'a>(&'a self, bins: &'a UnsafeBins) -> &'a Bins {
+        // SAFETY: We have read access ensuring the collector can't call
+        // `assume_mut()` while `self` exists. We can use this knowledge to
+        // safely create a reference tied to `self`'s lifetime.
         unsafe { bins.assume_readable() }
     }
 
@@ -2713,6 +2737,10 @@ impl AnyRoot {
         T: Collectable,
     {
         if TypeIndex::of::<T>() == self.any.type_index {
+            // SAFETY: `self` has a root reference to the underlying data,
+            // ensuring that it cannot be collected while `self` exists. We've
+            // verified that `T` is the same underlying type. We can return a
+            // reference bound to `self`'s lifetime safely.
             let rooted = unsafe { &*self.rooted.cast::<Rooted<T>>() };
             Some(&rooted.value)
         } else {
@@ -2728,6 +2756,8 @@ impl AnyRoot {
 
 impl Clone for AnyRoot {
     fn clone(&self) -> Self {
+        // SAFETY: `self` has a root reference to the underlying data, ensuring
+        // that it cannot be collected while `self` exists.
         unsafe { &*self.roots }.fetch_add(1, Ordering::Acquire);
         Self {
             rooted: self.rooted,
@@ -2739,6 +2769,8 @@ impl Clone for AnyRoot {
 
 impl Drop for AnyRoot {
     fn drop(&mut self) {
+        // SAFETY: `self` has a root reference to the underlying data, ensuring
+        // that it cannot be collected while `self` exists.
         if unsafe { &*self.roots }.fetch_sub(1, Ordering::Acquire) == 1 {
             CollectorCommand::schedule_collect_if_needed();
         }
