@@ -13,27 +13,25 @@
 //! use refuse::CollectionGuard;
 //! use refuse_pool::{RefString, RootString};
 //!
-//! refuse::collected(|| {
-//!     let a = RootString::from("a");
-//!     let a_again = RootString::from(String::from("a"));
+//! let a = RootString::from("a");
+//! let a_again = RootString::from(String::from("a"));
 //!
-//!     // Both a and a_again point to the same underlying storage.
-//!     assert_eq!(a.root_count(), 2);
-//!     // Comparing two RootStrings is cheap.
-//!     assert_eq!(a, a_again);
+//! // Both a and a_again point to the same underlying storage.
+//! assert_eq!(a.root_count(), 2);
+//! // Comparing two RootStrings is cheap.
+//! assert_eq!(a, a_again);
 //!
-//!     // a_ref can be used to gain a reference to a string,
-//!     // but only until the string is unreachable.
-//!     let a_ref = a.downgrade();
+//! // a_ref can be used to gain a reference to a string,
+//! // but only until the string is unreachable.
+//! let a_ref = a.downgrade();
 //!
-//!     let mut guard = CollectionGuard::acquire();
-//!     assert_eq!(a_ref.load(&guard), Some("a"));
+//! let mut guard = CollectionGuard::acquire();
+//! assert_eq!(a_ref.load(&guard), Some("a"));
 //!
-//!     drop(a);
-//!     drop(a_again);
-//!     guard.collect();
-//!     assert_eq!(a_ref.load(&guard), None);
-//! });
+//! drop(a);
+//! drop(a_again);
+//! guard.collect();
+//! assert_eq!(a_ref.load(&guard), None);
 //! ```
 //!
 //! [refuse]: https://github.com/khonsulabs/refuse

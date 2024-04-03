@@ -914,10 +914,8 @@ impl CollectionGuard<'static> {
     /// This guard is used to provide read-only access to garbage collected
     /// allocations.
     ///
-    /// # Panics
-    ///
-    /// A panic will occur if this function is called outside of code executed
-    /// by [`collected()`].
+    /// It is safe to acquire multiple guards on the same thread. The collector
+    /// will only be able to run when all guards have been released.
     #[must_use]
     pub fn acquire() -> Self {
         let thread = ThreadPool::get();
@@ -935,15 +933,17 @@ impl CollectionGuard<'static> {
         }
     }
 
-    /// Acquires a lock that prevents the garbage collector from running.
+    /// Tries to acquire a lock that prevents the garbage collector from
+    /// running.
+    ///
+    /// The function will return None if the collector is attempting to run
+    /// garbage collection, and this thread is not already guarded.
     ///
     /// This guard is used to provide read-only access to garbage collected
     /// allocations.
     ///
-    /// # Panics
-    ///
-    /// A panic will occur if this function is called outside of code executed
-    /// by [`collected()`].
+    /// It is safe to acquire multiple guards on the same thread. The collector
+    /// will only be able to run when all guards have been released.
     #[must_use]
     pub fn try_acquire() -> Option<Self> {
         let thread = ThreadPool::get();
