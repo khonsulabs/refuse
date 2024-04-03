@@ -47,5 +47,7 @@ jobs:
         uses: hecrj/setup-rust-action@v1
         with:
           rust-version: 1.73
-      - name: Run unit tests
-        run: cargo test --workspace
+      - name: Run unit tests (refuse)
+        run: cargo test -p refuse
+      - name: Run unit tests (refuse-pool)
+        run: cargo test -p refuse-pool
