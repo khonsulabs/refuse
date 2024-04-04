@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (88c2f4f5f 2024-04-02)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script> if (window.location.protocol !== "file:") document.write(`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2">`)</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (4fd4797c2 2024-04-03)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-c97aec732c613ca4.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -2940,6 +2940,52 @@
 <a href="#2938" id="2938">2938</a>
 <a href="#2939" id="2939">2939</a>
 <a href="#2940" id="2940">2940</a>
+<a href="#2941" id="2941">2941</a>
+<a href="#2942" id="2942">2942</a>
+<a href="#2943" id="2943">2943</a>
+<a href="#2944" id="2944">2944</a>
+<a href="#2945" id="2945">2945</a>
+<a href="#2946" id="2946">2946</a>
+<a href="#2947" id="2947">2947</a>
+<a href="#2948" id="2948">2948</a>
+<a href="#2949" id="2949">2949</a>
+<a href="#2950" id="2950">2950</a>
+<a href="#2951" id="2951">2951</a>
+<a href="#2952" id="2952">2952</a>
+<a href="#2953" id="2953">2953</a>
+<a href="#2954" id="2954">2954</a>
+<a href="#2955" id="2955">2955</a>
+<a href="#2956" id="2956">2956</a>
+<a href="#2957" id="2957">2957</a>
+<a href="#2958" id="2958">2958</a>
+<a href="#2959" id="2959">2959</a>
+<a href="#2960" id="2960">2960</a>
+<a href="#2961" id="2961">2961</a>
+<a href="#2962" id="2962">2962</a>
+<a href="#2963" id="2963">2963</a>
+<a href="#2964" id="2964">2964</a>
+<a href="#2965" id="2965">2965</a>
+<a href="#2966" id="2966">2966</a>
+<a href="#2967" id="2967">2967</a>
+<a href="#2968" id="2968">2968</a>
+<a href="#2969" id="2969">2969</a>
+<a href="#2970" id="2970">2970</a>
+<a href="#2971" id="2971">2971</a>
+<a href="#2972" id="2972">2972</a>
+<a href="#2973" id="2973">2973</a>
+<a href="#2974" id="2974">2974</a>
+<a href="#2975" id="2975">2975</a>
+<a href="#2976" id="2976">2976</a>
+<a href="#2977" id="2977">2977</a>
+<a href="#2978" id="2978">2978</a>
+<a href="#2979" id="2979">2979</a>
+<a href="#2980" id="2980">2980</a>
+<a href="#2981" id="2981">2981</a>
+<a href="#2982" id="2982">2982</a>
+<a href="#2983" id="2983">2983</a>
+<a href="#2984" id="2984">2984</a>
+<a href="#2985" id="2985">2985</a>
+<a href="#2986" id="2986">2986</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -4519,6 +4565,26 @@
         <span class="self">Self</span>::from_parts(type_index, gen, bin, guard)
     }
 
+    <span class="doccomment">/// Try to convert a typeless root reference into a `Root&lt;T&gt;`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(root)` if `root` does not contain a `T`.
+    </span><span class="kw">pub fn </span>try_from_any&lt;<span class="lifetime">'a</span>&gt;(
+        root: AnyRoot,
+        guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, AnyRoot&gt; {
+        <span class="kw">if </span>TypeIndex::of::&lt;T&gt;() == root.any.type_index {
+            <span class="kw">let </span>slot = root.any.load_slot(guard.as_ref()).expect(<span class="string">"root missing"</span>);
+            <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+                data: slot,
+                reference: root.any.downcast_ref(),
+            })
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(root)
+        }
+    }
+
     <span class="doccomment">/// Returns the current number of root references to this value, including
     /// `self`.
     </span><span class="attr">#[must_use]
@@ -4799,31 +4865,8 @@
         <span class="self">self</span>.any
     }
 
-    <span class="kw">fn </span>load_slot_from&lt;<span class="lifetime">'guard</span>&gt;(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        bins: <span class="kw-2">&amp;</span>Map&lt;TypeIndex, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;,
-        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt; {
-        bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.any.type_index)<span class="question-mark">?
-            </span>.as_any()
-            .downcast_ref::&lt;Bin&lt;T&gt;&gt;()<span class="question-mark">?
-            </span>.load(<span class="self">self</span>.any.bin_id, <span class="self">self</span>.any.slot_generation, guard)
-    }
-
     <span class="kw">fn </span>load_slot&lt;<span class="lifetime">'guard</span>&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt; {
-        <span class="kw">if </span>guard.thread.thread_id == <span class="self">self</span>.any.creating_thread {
-            <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>guard.bins().by_type.read(), guard)
-        } <span class="kw">else </span>{
-            <span class="kw">let </span>all_threads = guard.thread.all_threads.read();
-            <span class="kw">let </span>other_thread_bins = all_threads
-                .get(<span class="kw-2">&amp;</span><span class="self">self</span>.any.creating_thread)
-                .and_then(Weak::upgrade)<span class="question-mark">?</span>;
-            <span class="kw">let </span>bins = guard.bins_for(<span class="kw-2">&amp;</span>other_thread_bins);
-
-            <span class="kw">let </span>result = <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>bins.by_type.read(), guard);
-            drop(other_thread_bins);
-            result
-        }
+        <span class="self">self</span>.any.load_slot(guard)
     }
 
     <span class="doccomment">/// Loads a reference to the underlying data. Returns `None` if the data has
@@ -5753,6 +5796,43 @@
 }
 
 <span class="kw">impl </span>AnyRef {
+    <span class="doccomment">/// Loads a slot from a specific thread's bins, performing type checking in
+    /// the process.
+    </span><span class="kw">fn </span>load_slot_from&lt;<span class="lifetime">'guard</span>, T&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        bins: <span class="kw-2">&amp;</span>Map&lt;TypeIndex, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;,
+        guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt;
+    <span class="kw">where
+        </span>T: Collectable,
+    {
+        <span class="comment">// The Any::downcast_ref ensures that type_index and T match.
+        </span>bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.type_index)<span class="question-mark">?
+            </span>.as_any()
+            .downcast_ref::&lt;Bin&lt;T&gt;&gt;()<span class="question-mark">?
+            </span>.load(<span class="self">self</span>.bin_id, <span class="self">self</span>.slot_generation, guard)
+    }
+
+    <span class="doccomment">/// Loads a slot, performing type checking in the process.
+    </span><span class="kw">fn </span>load_slot&lt;<span class="lifetime">'guard</span>, T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span><span class="lifetime">'guard </span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'guard </span>Rooted&lt;T&gt;&gt;
+    <span class="kw">where
+        </span>T: Collectable,
+    {
+        <span class="kw">if </span>guard.thread.thread_id == <span class="self">self</span>.creating_thread {
+            <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>guard.bins().by_type.read(), guard)
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>all_threads = guard.thread.all_threads.read();
+            <span class="kw">let </span>other_thread_bins = all_threads
+                .get(<span class="kw-2">&amp;</span><span class="self">self</span>.creating_thread)
+                .and_then(Weak::upgrade)<span class="question-mark">?</span>;
+            <span class="kw">let </span>bins = guard.bins_for(<span class="kw-2">&amp;</span>other_thread_bins);
+
+            <span class="kw">let </span>result = <span class="self">self</span>.load_slot_from(<span class="kw-2">&amp;</span>bins.by_type.read(), guard);
+            drop(other_thread_bins);
+            result
+        }
+    }
+
     <span class="doccomment">/// Returns a [`Ref&lt;T&gt;`].
     ///
     /// This function does not do any type checking. If `T` is not the correct
@@ -5766,6 +5846,18 @@
             any: <span class="kw-2">*</span><span class="self">self</span>,
             _t: PhantomData,
         }
+    }
+
+    <span class="doccomment">/// Returns a [`Ref&lt;T&gt;`].
+    ///
+    /// This function does not do any type checking. If `T` is not the correct
+    /// type, attempting to load the underyling value will fail.
+    </span><span class="attr">#[must_use]
+    </span><span class="kw">pub fn </span>downcast_checked&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Ref&lt;T&gt;&gt;
+    <span class="kw">where
+        </span>T: Collectable,
+    {
+        (TypeIndex::of::&lt;T&gt;() == <span class="self">self</span>.type_index).then_some(<span class="self">self</span>.downcast_ref())
     }
 
     <span class="doccomment">/// Returns a [`Root&lt;T&gt;`] if the underlying reference points to a `T` that
