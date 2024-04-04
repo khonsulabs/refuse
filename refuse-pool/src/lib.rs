@@ -44,7 +44,7 @@ use std::sync::{Mutex, OnceLock};
 
 use ahash::AHasher;
 use hashbrown::{hash_table, HashTable};
-use refuse::{AnyRef, CollectionGuard, LocalPool, Ref, Root, SimpleType, Trace};
+use refuse::{AnyRef, AnyRoot, CollectionGuard, LocalPool, Ref, Root, SimpleType, Trace};
 
 enum PoolEntry {
     Rooted(RootString),
@@ -171,10 +171,9 @@ impl RootString {
     ///
     /// If another [`RootString`] or [`RefString`] exists already with the same
     /// contents as `s`, it will be returned and `s` will be dropped.
-    pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
-        let guard = CollectionGuard::acquire();
+    pub fn new<'a>(s: impl Into<Cow<'a, str>>, guard: impl AsRef<CollectionGuard<'a>>) -> Self {
         let mut pool = StringPool::global().lock().expect("poisoned");
-        pool.intern(s.into(), &guard).clone()
+        pool.intern(s.into(), guard.as_ref()).clone()
     }
 
     /// Returns a reference to this root string.
@@ -194,6 +193,18 @@ impl RootString {
         // confusion, as it did for @ecton when writing the first doctest for
         // this crate.
         self.0.root_count() - 1
+    }
+
+    /// Try to convert a typeless root reference to a root string reference.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(root)` if `root` does not contain a pooled string.
+    pub fn try_from_any<'a>(
+        root: AnyRoot,
+        guard: impl AsRef<CollectionGuard<'a>>,
+    ) -> Result<Self, AnyRoot> {
+        Root::try_from_any(root, guard).map(Self)
     }
 }
 
@@ -240,19 +251,22 @@ impl Display for RootString {
 
 impl From<&'_ str> for RootString {
     fn from(value: &'_ str) -> Self {
-        Self::new(value)
+        let guard = CollectionGuard::acquire();
+        Self::new(value, &guard)
     }
 }
 
 impl From<&'_ String> for RootString {
     fn from(value: &'_ String) -> Self {
-        Self::new(value)
+        let guard = CollectionGuard::acquire();
+        Self::new(value, &guard)
     }
 }
 
 impl From<String> for RootString {
     fn from(value: String) -> Self {
-        Self::new(value)
+        let guard = CollectionGuard::acquire();
+        Self::new(value, &guard)
     }
 }
 
@@ -355,6 +369,13 @@ impl RefString {
         let guard = CollectionGuard::acquire();
         let mut pool = StringPool::global().lock().expect("poisoned");
         pool.intern(s.into(), &guard).downgrade()
+    }
+
+    /// Upgrades a typeless reference to a pooled string reference.
+    ///
+    /// Returns `None` if `any` is not a pooled string.
+    pub fn from_any(any: AnyRef) -> Option<Self> {
+        any.downcast_checked().map(Self)
     }
 
     /// Loads a reference to the underlying string, if the string hasn't been

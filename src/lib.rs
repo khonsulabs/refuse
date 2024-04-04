@@ -1577,6 +1577,26 @@ where
         Self::from_parts(type_index, gen, bin, guard)
     }
 
+    /// Try to convert a typeless root reference into a `Root<T>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(root)` if `root` does not contain a `T`.
+    pub fn try_from_any<'a>(
+        root: AnyRoot,
+        guard: impl AsRef<CollectionGuard<'a>>,
+    ) -> Result<Self, AnyRoot> {
+        if TypeIndex::of::<T>() == root.any.type_index {
+            let slot = root.any.load_slot(guard.as_ref()).expect("root missing");
+            Ok(Self {
+                data: slot,
+                reference: root.any.downcast_ref(),
+            })
+        } else {
+            Err(root)
+        }
+    }
+
     /// Returns the current number of root references to this value, including
     /// `self`.
     #[must_use]
@@ -1857,31 +1877,8 @@ where
         self.any
     }
 
-    fn load_slot_from<'guard>(
-        &self,
-        bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
-        guard: &'guard CollectionGuard<'_>,
-    ) -> Option<&'guard Rooted<T>> {
-        bins.get(&self.any.type_index)?
-            .as_any()
-            .downcast_ref::<Bin<T>>()?
-            .load(self.any.bin_id, self.any.slot_generation, guard)
-    }
-
     fn load_slot<'guard>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard Rooted<T>> {
-        if guard.thread.thread_id == self.any.creating_thread {
-            self.load_slot_from(&guard.bins().by_type.read(), guard)
-        } else {
-            let all_threads = guard.thread.all_threads.read();
-            let other_thread_bins = all_threads
-                .get(&self.any.creating_thread)
-                .and_then(Weak::upgrade)?;
-            let bins = guard.bins_for(&other_thread_bins);
-
-            let result = self.load_slot_from(&bins.by_type.read(), guard);
-            drop(other_thread_bins);
-            result
-        }
+        self.any.load_slot(guard)
     }
 
     /// Loads a reference to the underlying data. Returns `None` if the data has
@@ -2811,6 +2808,43 @@ pub struct AnyRef {
 }
 
 impl AnyRef {
+    /// Loads a slot from a specific thread's bins, performing type checking in
+    /// the process.
+    fn load_slot_from<'guard, T>(
+        &self,
+        bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
+        guard: &'guard CollectionGuard<'_>,
+    ) -> Option<&'guard Rooted<T>>
+    where
+        T: Collectable,
+    {
+        // The Any::downcast_ref ensures that type_index and T match.
+        bins.get(&self.type_index)?
+            .as_any()
+            .downcast_ref::<Bin<T>>()?
+            .load(self.bin_id, self.slot_generation, guard)
+    }
+
+    /// Loads a slot, performing type checking in the process.
+    fn load_slot<'guard, T>(&self, guard: &'guard CollectionGuard<'_>) -> Option<&'guard Rooted<T>>
+    where
+        T: Collectable,
+    {
+        if guard.thread.thread_id == self.creating_thread {
+            self.load_slot_from(&guard.bins().by_type.read(), guard)
+        } else {
+            let all_threads = guard.thread.all_threads.read();
+            let other_thread_bins = all_threads
+                .get(&self.creating_thread)
+                .and_then(Weak::upgrade)?;
+            let bins = guard.bins_for(&other_thread_bins);
+
+            let result = self.load_slot_from(&bins.by_type.read(), guard);
+            drop(other_thread_bins);
+            result
+        }
+    }
+
     /// Returns a [`Ref<T>`].
     ///
     /// This function does not do any type checking. If `T` is not the correct
@@ -2824,6 +2858,18 @@ impl AnyRef {
             any: *self,
             _t: PhantomData,
         }
+    }
+
+    /// Returns a [`Ref<T>`].
+    ///
+    /// This function does not do any type checking. If `T` is not the correct
+    /// type, attempting to load the underyling value will fail.
+    #[must_use]
+    pub fn downcast_checked<T>(&self) -> Option<Ref<T>>
+    where
+        T: Collectable,
+    {
+        (TypeIndex::of::<T>() == self.type_index).then_some(self.downcast_ref())
     }
 
     /// Returns a [`Root<T>`] if the underlying reference points to a `T` that
