@@ -7,6 +7,7 @@ use attribute_derive::FromAttr;
 use manyhow::manyhow;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
+use syn::{GenericParam, Generics, Lifetime, TraitBound};
 
 #[manyhow]
 #[proc_macro_derive(MapAs, attributes(map_as))]
@@ -74,11 +75,12 @@ fn field_accessor(field: &syn::Field, index: usize) -> TokenStream {
 fn derive_struct_trace(
     syn::ItemStruct {
         ident,
-        generics,
+        mut generics,
         fields,
         ..
     }: syn::ItemStruct,
 ) -> TokenStream {
+    require_trace_for_generics(&mut generics);
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let fields_and_types = fields
@@ -107,7 +109,7 @@ fn derive_struct_trace(
     });
 
     quote! {
-        impl<#impl_gen> refuse::Trace for #ident<#type_gen> #where_clause {
+        impl #impl_gen refuse::Trace for #ident #type_gen #where_clause {
             const MAY_CONTAIN_REFERENCES: bool = #may_contain_refs;
 
             fn trace(&self, tracer: &mut refuse::Tracer) {
@@ -117,14 +119,34 @@ fn derive_struct_trace(
     }
 }
 
+fn require_trace_for_generics(generics: &mut Generics) {
+    for mut pair in generics.params.pairs_mut() {
+        if let GenericParam::Type(t) = pair.value_mut() {
+            t.bounds.push(syn::TypeParamBound::Trait(
+                TraitBound::from_input(quote!(refuse::Trace)).unwrap(),
+            ));
+            t.bounds.push(syn::TypeParamBound::Trait(
+                TraitBound::from_input(quote!(::std::marker::Send)).unwrap(),
+            ));
+            t.bounds.push(syn::TypeParamBound::Trait(
+                TraitBound::from_input(quote!(::std::marker::Sync)).unwrap(),
+            ));
+            t.bounds.push(syn::TypeParamBound::Lifetime(
+                Lifetime::from_input(quote!('static)).unwrap(),
+            ));
+        }
+    }
+}
+
 fn derive_enum_trace(
     syn::ItemEnum {
         ident: enum_name,
-        generics,
+        mut generics,
         variants,
         ..
     }: syn::ItemEnum,
 ) -> TokenStream {
+    require_trace_for_generics(&mut generics);
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let mut all_types = HashSet::new();
@@ -169,7 +191,7 @@ fn derive_enum_trace(
     };
 
     quote! {
-        impl<#impl_gen> refuse::Trace for #enum_name<#type_gen> #where_clause {
+        impl #impl_gen refuse::Trace for #enum_name #type_gen #where_clause {
             const MAY_CONTAIN_REFERENCES: bool = #may_contain_refs;
 
             fn trace(&self, tracer: &mut refuse::Tracer) {

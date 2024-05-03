@@ -136,28 +136,6 @@ fn hash_str(str: &str) -> u64 {
     hasher.finish()
 }
 
-struct StoredString(Root<PooledString>);
-
-impl Hash for StoredString {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash.hash(state);
-    }
-}
-
-impl Eq for StoredString {}
-
-impl PartialEq for StoredString {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.hash == other.0.hash && self.0.string == other.0.string
-    }
-}
-
-impl PartialEq<&'_ str> for StoredString {
-    fn eq(&self, other: &&'_ str) -> bool {
-        &*self.0.string == *other
-    }
-}
-
 /// A "root" reference to a garbage collected, interned string.
 ///
 /// This type is cheap to check equality because it ensures each unique string
