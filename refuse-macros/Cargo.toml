@@ -1,6 +1,6 @@
 [package]
 name = "refuse-macros"
-version = "0.0.2"
+version = "0.0.3"
 description = "Macros for the Refuse garbage collector"
 edition = "2021"
 rust-version = "1.73.0"
