@@ -693,11 +693,11 @@ pub struct LocalPool {
 impl Default for LocalPool {
     fn default() -> Self {
         let all_threads = GlobalCollector::get().info.all_threads.clone();
-        let bins = Arc::<UnsafeBins>::default();
         loop {
             let thread_id = CollectorThreadId::unique();
             let mut threads = all_threads.write();
             if let kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
+                let bins = Arc::<UnsafeBins>::default();
                 CollectorCommand::NewThread(thread_id, bins.clone()).send();
                 entry.insert(Arc::downgrade(&bins));
                 drop(threads);
@@ -2047,7 +2047,7 @@ impl Bins {
                 // only thread that can allocate is the local thread. We needed a
                 // write guard, however, because other threads could be trying to
                 // load data this thread allocated.
-                let bin = Bin::new(value, type_id);
+                let bin = Bin::new(value, type_id, bins_guard.thread.thread_id);
                 by_type.insert(type_id, Arc::new(bin));
                 (type_id, 0, BinId::first())
             })
@@ -2059,6 +2059,7 @@ struct Bin<T>
 where
     T: Collectable,
 {
+    thread_id: CollectorThreadId,
     type_index: TypeIndex,
     free_head: AtomicU32,
     slabs: Slabs<T>,
@@ -2070,8 +2071,9 @@ impl<T> Bin<T>
 where
     T: Collectable,
 {
-    fn new(first_value: Rooted<T>, type_index: TypeIndex) -> Self {
+    fn new(first_value: Rooted<T>, type_index: TypeIndex, thread_id: CollectorThreadId) -> Self {
         Self {
+            thread_id,
             type_index,
             free_head: AtomicU32::new(0),
             slabs: Slabs::new(first_value, 0),
@@ -2154,6 +2156,12 @@ trait AnyBin: Send + Sync {
     fn sweep(&self, mark_bits: u8) -> usize;
     fn as_any(&self) -> &dyn Any;
     fn mapper(&self) -> &dyn Any;
+    fn load_root(
+        &self,
+        bin_id: BinId,
+        slot_generation: u32,
+        guard: &CollectionGuard<'_>,
+    ) -> Option<AnyRoot>;
 }
 
 impl<T> AnyBin for Bin<T>
@@ -2233,6 +2241,35 @@ where
 
     fn mapper(&self) -> &dyn Any {
         &self.mapper
+    }
+
+    fn load_root(
+        &self,
+        bin_id: BinId,
+        slot_generation: u32,
+        _guard: &CollectionGuard<'_>,
+    ) -> Option<AnyRoot> {
+        let slab = self.slabs.get(bin_id.slab() as usize)?;
+        let slot = &slab.slots[usize::from(bin_id.slot())];
+        if slot.state.allocated_with_generation(slot_generation) {
+            // SAFETY: The collector cannot collect data while `_guard` is
+            // active, so it is safe to create a reference to this data within
+            // this function.
+            let slot = unsafe { &(*slot.value.get()).allocated };
+            slot.roots.fetch_add(1, Ordering::Relaxed);
+            Some(AnyRoot {
+                rooted: (&**slot) as *const Rooted<T> as *const (),
+                roots: &slot.roots,
+                any: AnyRef {
+                    bin_id,
+                    creating_thread: self.thread_id,
+                    type_index: self.type_index,
+                    slot_generation,
+                },
+            })
+        } else {
+            None
+        }
     }
 }
 
@@ -2858,6 +2895,32 @@ impl AnyRef {
             any: *self,
             _t: PhantomData,
         }
+    }
+
+    /// Returns a root for this reference, if the value has not been collected.
+    pub fn upgrade(&self, guard: &CollectionGuard<'_>) -> Option<AnyRoot> {
+        if guard.thread.thread_id == self.creating_thread {
+            self.load_root_from(&guard.bins().by_type.read(), guard)
+        } else {
+            let all_threads = guard.thread.all_threads.read();
+            let other_thread_bins = all_threads
+                .get(&self.creating_thread)
+                .and_then(Weak::upgrade)?;
+            let bins = guard.bins_for(&other_thread_bins);
+
+            let result = self.load_root_from(&bins.by_type.read(), guard);
+            drop(other_thread_bins);
+            result
+        }
+    }
+
+    fn load_root_from(
+        &self,
+        bins: &Map<TypeIndex, Arc<dyn AnyBin>>,
+        guard: &CollectionGuard<'_>,
+    ) -> Option<AnyRoot> {
+        bins.get(&self.type_index)?
+            .load_root(self.bin_id, self.slot_generation, guard)
     }
 
     /// Returns a [`Ref<T>`].
