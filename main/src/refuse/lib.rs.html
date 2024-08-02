@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-b21aa549bf6d91ff.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (79734f1db 2024-05-02)" data-channel="nightly" data-search-js="search-bf21c90c8c1d92b1.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../refuse/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-970bf1bf55bd1c15.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.82.0-nightly (8e86c9567 2024-08-01)" data-channel="nightly" data-search-js="search-ef54e092fea9c776.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f9142fe437216fc3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -2984,6 +2984,69 @@
 <a href="#2984" id="2984">2984</a>
 <a href="#2985" id="2985">2985</a>
 <a href="#2986" id="2986">2986</a>
+<a href="#2987" id="2987">2987</a>
+<a href="#2988" id="2988">2988</a>
+<a href="#2989" id="2989">2989</a>
+<a href="#2990" id="2990">2990</a>
+<a href="#2991" id="2991">2991</a>
+<a href="#2992" id="2992">2992</a>
+<a href="#2993" id="2993">2993</a>
+<a href="#2994" id="2994">2994</a>
+<a href="#2995" id="2995">2995</a>
+<a href="#2996" id="2996">2996</a>
+<a href="#2997" id="2997">2997</a>
+<a href="#2998" id="2998">2998</a>
+<a href="#2999" id="2999">2999</a>
+<a href="#3000" id="3000">3000</a>
+<a href="#3001" id="3001">3001</a>
+<a href="#3002" id="3002">3002</a>
+<a href="#3003" id="3003">3003</a>
+<a href="#3004" id="3004">3004</a>
+<a href="#3005" id="3005">3005</a>
+<a href="#3006" id="3006">3006</a>
+<a href="#3007" id="3007">3007</a>
+<a href="#3008" id="3008">3008</a>
+<a href="#3009" id="3009">3009</a>
+<a href="#3010" id="3010">3010</a>
+<a href="#3011" id="3011">3011</a>
+<a href="#3012" id="3012">3012</a>
+<a href="#3013" id="3013">3013</a>
+<a href="#3014" id="3014">3014</a>
+<a href="#3015" id="3015">3015</a>
+<a href="#3016" id="3016">3016</a>
+<a href="#3017" id="3017">3017</a>
+<a href="#3018" id="3018">3018</a>
+<a href="#3019" id="3019">3019</a>
+<a href="#3020" id="3020">3020</a>
+<a href="#3021" id="3021">3021</a>
+<a href="#3022" id="3022">3022</a>
+<a href="#3023" id="3023">3023</a>
+<a href="#3024" id="3024">3024</a>
+<a href="#3025" id="3025">3025</a>
+<a href="#3026" id="3026">3026</a>
+<a href="#3027" id="3027">3027</a>
+<a href="#3028" id="3028">3028</a>
+<a href="#3029" id="3029">3029</a>
+<a href="#3030" id="3030">3030</a>
+<a href="#3031" id="3031">3031</a>
+<a href="#3032" id="3032">3032</a>
+<a href="#3033" id="3033">3033</a>
+<a href="#3034" id="3034">3034</a>
+<a href="#3035" id="3035">3035</a>
+<a href="#3036" id="3036">3036</a>
+<a href="#3037" id="3037">3037</a>
+<a href="#3038" id="3038">3038</a>
+<a href="#3039" id="3039">3039</a>
+<a href="#3040" id="3040">3040</a>
+<a href="#3041" id="3041">3041</a>
+<a href="#3042" id="3042">3042</a>
+<a href="#3043" id="3043">3043</a>
+<a href="#3044" id="3044">3044</a>
+<a href="#3045" id="3045">3045</a>
+<a href="#3046" id="3046">3046</a>
+<a href="#3047" id="3047">3047</a>
+<a href="#3048" id="3048">3048</a>
+<a href="#3049" id="3049">3049</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -3679,11 +3742,11 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>LocalPool {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>all_threads = GlobalCollector::get().info.all_threads.clone();
-        <span class="kw">let </span>bins = Arc::&lt;UnsafeBins&gt;::default();
         <span class="kw">loop </span>{
             <span class="kw">let </span>thread_id = CollectorThreadId::unique();
             <span class="kw">let </span><span class="kw-2">mut </span>threads = all_threads.write();
             <span class="kw">if let </span>kempt::map::Entry::Vacant(entry) = threads.entry(thread_id) {
+                <span class="kw">let </span>bins = Arc::&lt;UnsafeBins&gt;::default();
                 CollectorCommand::NewThread(thread_id, bins.clone()).send();
                 entry.insert(Arc::downgrade(<span class="kw-2">&amp;</span>bins));
                 drop(threads);
@@ -5033,7 +5096,7 @@
                 // only thread that can allocate is the local thread. We needed a
                 // write guard, however, because other threads could be trying to
                 // load data this thread allocated.
-                </span><span class="kw">let </span>bin = Bin::new(value, type_id);
+                </span><span class="kw">let </span>bin = Bin::new(value, type_id, bins_guard.thread.thread_id);
                 by_type.insert(type_id, Arc::new(bin));
                 (type_id, <span class="number">0</span>, BinId::first())
             })
@@ -5045,6 +5108,7 @@
 <span class="kw">where
     </span>T: Collectable,
 {
+    thread_id: CollectorThreadId,
     type_index: TypeIndex,
     free_head: AtomicU32,
     slabs: Slabs&lt;T&gt;,
@@ -5056,8 +5120,9 @@
 <span class="kw">where
     </span>T: Collectable,
 {
-    <span class="kw">fn </span>new(first_value: Rooted&lt;T&gt;, type_index: TypeIndex) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(first_value: Rooted&lt;T&gt;, type_index: TypeIndex, thread_id: CollectorThreadId) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
+            thread_id,
             type_index,
             free_head: AtomicU32::new(<span class="number">0</span>),
             slabs: Slabs::new(first_value, <span class="number">0</span>),
@@ -5140,6 +5205,12 @@
     <span class="kw">fn </span>sweep(<span class="kw-2">&amp;</span><span class="self">self</span>, mark_bits: u8) -&gt; usize;
     <span class="kw">fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>Any;
     <span class="kw">fn </span>mapper(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>Any;
+    <span class="kw">fn </span>load_root(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        bin_id: BinId,
+        slot_generation: u32,
+        guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;AnyRoot&gt;;
 }
 
 <span class="kw">impl</span>&lt;T&gt; AnyBin <span class="kw">for </span>Bin&lt;T&gt;
@@ -5219,6 +5290,35 @@
 
     <span class="kw">fn </span>mapper(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="kw">dyn </span>Any {
         <span class="kw-2">&amp;</span><span class="self">self</span>.mapper
+    }
+
+    <span class="kw">fn </span>load_root(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        bin_id: BinId,
+        slot_generation: u32,
+        _guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;AnyRoot&gt; {
+        <span class="kw">let </span>slab = <span class="self">self</span>.slabs.get(bin_id.slab() <span class="kw">as </span>usize)<span class="question-mark">?</span>;
+        <span class="kw">let </span>slot = <span class="kw-2">&amp;</span>slab.slots[usize::from(bin_id.slot())];
+        <span class="kw">if </span>slot.state.allocated_with_generation(slot_generation) {
+            <span class="comment">// SAFETY: The collector cannot collect data while `_guard` is
+            // active, so it is safe to create a reference to this data within
+            // this function.
+            </span><span class="kw">let </span>slot = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>slot.value.get()).allocated };
+            slot.roots.fetch_add(<span class="number">1</span>, Ordering::Relaxed);
+            <span class="prelude-val">Some</span>(AnyRoot {
+                rooted: (<span class="kw-2">&amp;**</span>slot) <span class="kw">as </span><span class="kw-2">*const </span>Rooted&lt;T&gt; <span class="kw">as </span><span class="kw-2">*const </span>(),
+                roots: <span class="kw-2">&amp;</span>slot.roots,
+                any: AnyRef {
+                    bin_id,
+                    creating_thread: <span class="self">self</span>.thread_id,
+                    type_index: <span class="self">self</span>.type_index,
+                    slot_generation,
+                },
+            })
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>}
     }
 }
 
@@ -5844,6 +5944,32 @@
             any: <span class="kw-2">*</span><span class="self">self</span>,
             _t: PhantomData,
         }
+    }
+
+    <span class="doccomment">/// Returns a root for this reference, if the value has not been collected.
+    </span><span class="kw">pub fn </span>upgrade(<span class="kw-2">&amp;</span><span class="self">self</span>, guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;AnyRoot&gt; {
+        <span class="kw">if </span>guard.thread.thread_id == <span class="self">self</span>.creating_thread {
+            <span class="self">self</span>.load_root_from(<span class="kw-2">&amp;</span>guard.bins().by_type.read(), guard)
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>all_threads = guard.thread.all_threads.read();
+            <span class="kw">let </span>other_thread_bins = all_threads
+                .get(<span class="kw-2">&amp;</span><span class="self">self</span>.creating_thread)
+                .and_then(Weak::upgrade)<span class="question-mark">?</span>;
+            <span class="kw">let </span>bins = guard.bins_for(<span class="kw-2">&amp;</span>other_thread_bins);
+
+            <span class="kw">let </span>result = <span class="self">self</span>.load_root_from(<span class="kw-2">&amp;</span>bins.by_type.read(), guard);
+            drop(other_thread_bins);
+            result
+        }
+    }
+
+    <span class="kw">fn </span>load_root_from(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        bins: <span class="kw-2">&amp;</span>Map&lt;TypeIndex, Arc&lt;<span class="kw">dyn </span>AnyBin&gt;&gt;,
+        guard: <span class="kw-2">&amp;</span>CollectionGuard&lt;<span class="lifetime">'_</span>&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;AnyRoot&gt; {
+        bins.get(<span class="kw-2">&amp;</span><span class="self">self</span>.type_index)<span class="question-mark">?
+            </span>.load_root(<span class="self">self</span>.bin_id, <span class="self">self</span>.slot_generation, guard)
     }
 
     <span class="doccomment">/// Returns a [`Ref&lt;T&gt;`].
