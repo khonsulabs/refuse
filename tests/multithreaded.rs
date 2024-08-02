@@ -37,6 +37,7 @@ fn round_robin() {
             .0
             .send(Command::Enqueue(Root::new(WorkUnit::default(), &guard)))
             .expect("worker disconnected early");
+        outstanding.push_one();
     }
     drop(guard);
 
@@ -76,7 +77,7 @@ fn thread_worker(
                 if queue.items.is_empty() {
                     next_thread
                         .send(Command::Work)
-                        .expect("next thread disconnted");
+                        .expect("next thread disconnected");
                 } else {
                     let work = match queue.items[0].as_root(&guard) {
                         Some(work) => {
@@ -118,6 +119,10 @@ impl OutstandingWork {
 
     fn complete_one(&self) {
         self.0.fetch_sub(1, Ordering::Acquire);
+    }
+
+    fn push_one(&self) {
+        self.0.fetch_add(1, Ordering::Acquire);
     }
 }
 
