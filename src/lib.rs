@@ -2782,6 +2782,50 @@ impl AnyRoot {
         }
     }
 
+    /// Returns a [`Root<T>`] if the underlying reference points to a `T`.
+    pub fn downcast_root<T>(&self) -> Option<Root<T>>
+    where
+        T: Collectable,
+    {
+        if TypeIndex::of::<T>() == self.any.type_index {
+            // SAFETY: `self` has a root reference to the underlying data,
+            // ensuring that it cannot be collected while `self` exists. We've
+            // verified that `T` is the same underlying type. We can return a
+            // reference bound to `self`'s lifetime safely.
+            let rooted = unsafe { &*self.rooted.cast::<Rooted<T>>() };
+
+            // Increment the strong count for the returned root.
+            rooted.roots.fetch_add(1, Ordering::Relaxed);
+
+            Some(Root {
+                data: rooted,
+                reference: self.downcast_ref(),
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Returns a [`Ref<T>`].
+    ///
+    /// This function does not do any type checking. If `T` is not the correct
+    /// type, attempting to load the underyling value will fail.
+    pub const fn downcast_ref<T>(&self) -> Ref<T>
+    where
+        T: Collectable,
+    {
+        self.any.downcast_ref()
+    }
+
+    /// Returns a [`Ref<T>`], if `T` matches the type of this reference.
+    #[must_use]
+    pub fn downcast_checked<T>(&self) -> Option<Ref<T>>
+    where
+        T: Collectable,
+    {
+        self.any.downcast_checked()
+    }
+
     /// Returns an untyped "weak" reference to this root.
     pub const fn as_any(&self) -> AnyRef {
         self.any
@@ -2923,10 +2967,7 @@ impl AnyRef {
             .load_root(self.bin_id, self.slot_generation, guard)
     }
 
-    /// Returns a [`Ref<T>`].
-    ///
-    /// This function does not do any type checking. If `T` is not the correct
-    /// type, attempting to load the underyling value will fail.
+    /// Returns a [`Ref<T>`], if `T` matches the type of this reference.
     #[must_use]
     pub fn downcast_checked<T>(&self) -> Option<Ref<T>>
     where
