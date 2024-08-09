@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `refuse-macros/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-970bf1bf55bd1c15.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.82.0-nightly (8e86c9567 2024-08-01)" data-channel="nightly" data-search-js="search-ef54e092fea9c776.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-f9142fe437216fc3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `refuse-macros/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-d10b2a06af903387.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.82.0-nightly (3e9bd8b56 2024-08-08)" data-channel="nightly" data-search-js="search-ef54e092fea9c776.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-04a29ac50d05d0b1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -209,6 +209,36 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Macros for the [Refuse](https://github.com/khonsulabs/refuse) garbage
 //! collector.
 
@@ -265,11 +295,11 @@
 }
 
 <span class="attr">#[manyhow]
-#[proc_macro_derive(Trace)]
+#[proc_macro_derive(Trace, attributes(trace))]
 </span><span class="kw">pub fn </span>derive_trace(input: syn::Item) -&gt; manyhow::Result {
     <span class="kw">match </span>input {
-        syn::Item::Struct(item) =&gt; <span class="prelude-val">Ok</span>(derive_struct_trace(item)),
-        syn::Item::Enum(item) =&gt; <span class="prelude-val">Ok</span>(derive_enum_trace(item)),
+        syn::Item::Struct(item) =&gt; derive_struct_trace(item),
+        syn::Item::Enum(item) =&gt; derive_enum_trace(item),
         <span class="kw">_ </span>=&gt; <span class="macro">manyhow::bail!</span>(<span class="string">"Collectable can only derived on structs and enums"</span>),
     }
 }
@@ -290,19 +320,19 @@
         fields,
         ..
     }: syn::ItemStruct,
-) -&gt; TokenStream {
+) -&gt; manyhow::Result {
     require_trace_for_generics(<span class="kw-2">&amp;mut </span>generics);
     <span class="kw">let </span>(impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
-    <span class="kw">let </span>fields_and_types = fields
-        .iter()
-        .enumerate()
-        .map(|(index, field)| {
+    <span class="kw">let </span><span class="kw-2">mut </span>fields_and_types = Vec::new();
+    <span class="kw">for </span>(index, field) <span class="kw">in </span>fields.iter().enumerate() {
+        <span class="kw">let </span>field_attr = TraceFieldAttr::from_attributes(<span class="kw-2">&amp;</span>field.attrs)<span class="question-mark">?</span>;
+        <span class="kw">if </span>!field_attr.ignore {
             <span class="kw">let </span>field_accessor = field_accessor(field, index);
 
-            (field_accessor, field.ty.clone())
-        })
-        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            fields_and_types.push((field_accessor, field.ty.clone()));
+        }
+    }
 
     <span class="kw">let </span>types = fields_and_types
         .iter()
@@ -319,7 +349,7 @@
         <span class="macro">quote!</span> {refuse::Trace::trace(<span class="kw-2">&amp;</span><span class="self">self</span>.#field, tracer)}
     });
 
-    <span class="macro">quote!</span> {
+    <span class="prelude-val">Ok</span>(<span class="macro">quote!</span> {
         <span class="kw">impl </span>#impl_gen refuse::Trace <span class="kw">for </span>#ident #type_gen #where_clause {
             <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = #may_contain_refs;
 
@@ -327,7 +357,7 @@
                 #(#traces;)*
             }
         }
-    }
+    })
 }
 
 <span class="kw">fn </span>require_trace_for_generics(generics: <span class="kw-2">&amp;mut </span>Generics) {
@@ -356,43 +386,61 @@
         variants,
         ..
     }: syn::ItemEnum,
-) -&gt; TokenStream {
+) -&gt; manyhow::Result {
     require_trace_for_generics(<span class="kw-2">&amp;mut </span>generics);
     <span class="kw">let </span>(impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     <span class="kw">let </span><span class="kw-2">mut </span>all_types = HashSet::new();
-    <span class="kw">let </span>traces = variants
-        .iter()
-        .map(|syn::Variant { ident, fields, .. }| <span class="kw">match </span>fields {
-            syn::Fields::Named(fields) =&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>field_names = Vec::new();
-                <span class="kw">for </span>field <span class="kw">in </span><span class="kw-2">&amp;</span>fields.named {
-                    all_types.insert(field.ty.clone());
+    <span class="kw">let </span><span class="kw-2">mut </span>traces = Vec::new();
 
-                    <span class="kw">let </span>name = field.ident.clone().expect(<span class="string">"name missing"</span>);
+    <span class="kw">for </span>syn::Variant {
+        ident,
+        fields,
+        attrs,
+        ..
+    } <span class="kw">in </span><span class="kw-2">&amp;</span>variants
+    {
+        <span class="kw">let </span>field_attr = TraceFieldAttr::from_attributes(attrs)<span class="question-mark">?</span>;
+        <span class="kw">if </span>!field_attr.ignore {
+            <span class="kw">let </span>trace = <span class="kw">match </span>fields {
+                syn::Fields::Named(fields) =&gt; {
+                    <span class="kw">let </span><span class="kw-2">mut </span>field_names = Vec::new();
+                    <span class="kw">for </span>field <span class="kw">in </span><span class="kw-2">&amp;</span>fields.named {
+                        <span class="kw">let </span>field_attr = TraceFieldAttr::from_attributes(<span class="kw-2">&amp;</span>field.attrs)<span class="question-mark">?</span>;
+                        <span class="kw">if </span>!field_attr.ignore {
+                            all_types.insert(field.ty.clone());
 
-                    field_names.push(name);
+                            <span class="kw">let </span>name = field.ident.clone().expect(<span class="string">"name missing"</span>);
+
+                            field_names.push(name);
+                        }
+                    }
+                    <span class="macro">quote!</span> {<span class="self">Self</span>::#ident { #(#field_names,)* } =&gt; {
+                        #(refuse::Trace::trace(#field_names, tracer);)*
+                    }}
                 }
-                <span class="macro">quote!</span> {<span class="self">Self</span>::#ident { #(#field_names,)* } =&gt; {
-                    #(refuse::Trace::trace(#field_names, tracer);)*
-                }}
-            }
-            syn::Fields::Unnamed(fields) =&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>field_names = Vec::new();
-                <span class="kw">for </span>(index, field) <span class="kw">in </span>fields.unnamed.iter().enumerate() {
-                    all_types.insert(field.ty.clone());
+                syn::Fields::Unnamed(fields) =&gt; {
+                    <span class="kw">let </span><span class="kw-2">mut </span>field_names = Vec::new();
+                    <span class="kw">for </span>(index, field) <span class="kw">in </span>fields.unnamed.iter().enumerate() {
+                        <span class="kw">let </span>field_attr = TraceFieldAttr::from_attributes(<span class="kw-2">&amp;</span>field.attrs)<span class="question-mark">?</span>;
+                        <span class="kw">if </span>!field_attr.ignore {
+                            all_types.insert(field.ty.clone());
 
-                    field_names.push(syn::Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"f{index}"</span>), Span::call_site()));
+                            field_names
+                                .push(syn::Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"f{index}"</span>), Span::call_site()));
+                        }
+                    }
+                    <span class="macro">quote!</span> {<span class="self">Self</span>::#ident ( #(#field_names,)* ) =&gt; {
+                        #(refuse::Trace::trace(#field_names, tracer);)*
+                    }}
                 }
-                <span class="macro">quote!</span> {<span class="self">Self</span>::#ident ( #(#field_names,)* ) =&gt; {
-                    #(refuse::Trace::trace(#field_names, tracer);)*
-                }}
-            }
-            syn::Fields::Unit =&gt; {
-                <span class="macro">quote!</span> {<span class="self">Self</span>::#ident =&gt; {}}
-            }
-        })
-        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                syn::Fields::Unit =&gt; {
+                    <span class="macro">quote!</span> {<span class="self">Self</span>::#ident =&gt; {}}
+                }
+            };
+            traces.push(trace);
+        }
+    }
 
     <span class="kw">let </span>type_mays = all_types
         .into_iter()
@@ -400,18 +448,24 @@
     <span class="kw">let </span>may_contain_refs = <span class="macro">quote!</span> {
         #(#type_mays |)* <span class="bool-val">false
     </span>};
-
-    <span class="macro">quote!</span> {
+    <span class="kw">let </span>traces = <span class="kw">if </span>traces.is_empty() {
+        TokenStream::default()
+    } <span class="kw">else </span>{
+        <span class="macro">quote!</span>(
+            <span class="kw">match </span><span class="self">self </span>{
+                #(#traces)*
+            }
+        )
+    };
+    <span class="prelude-val">Ok</span>(<span class="macro">quote!</span> {
         <span class="kw">impl </span>#impl_gen refuse::Trace <span class="kw">for </span>#enum_name #type_gen #where_clause {
             <span class="kw">const </span>MAY_CONTAIN_REFERENCES: bool = #may_contain_refs;
 
             <span class="kw">fn </span>trace(<span class="kw-2">&amp;</span><span class="self">self</span>, tracer: <span class="kw-2">&amp;mut </span>refuse::Tracer) {
-                <span class="kw">match </span><span class="self">self </span>{
-                    #(#traces)*
-                }
+                #traces
             }
         }
-    }
+    })
 }
 
 <span class="attr">#[derive(FromAttr)]
@@ -419,5 +473,11 @@
 </span><span class="kw">struct </span>MapAsAttr {
     target: <span class="prelude-ty">Option</span>&lt;syn::Type&gt;,
     map: <span class="prelude-ty">Option</span>&lt;syn::Expr&gt;,
+}
+
+<span class="attr">#[derive(FromAttr)]
+#[attribute(ident = trace)]
+</span><span class="kw">struct </span>TraceFieldAttr {
+    ignore: bool,
 }
 </code></pre></div></section></main></body></html>
