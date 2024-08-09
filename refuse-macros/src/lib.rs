@@ -54,11 +54,11 @@ fn derive_map_as_inner(
 }
 
 #[manyhow]
-#[proc_macro_derive(Trace)]
+#[proc_macro_derive(Trace, attributes(trace))]
 pub fn derive_trace(input: syn::Item) -> manyhow::Result {
     match input {
-        syn::Item::Struct(item) => Ok(derive_struct_trace(item)),
-        syn::Item::Enum(item) => Ok(derive_enum_trace(item)),
+        syn::Item::Struct(item) => derive_struct_trace(item),
+        syn::Item::Enum(item) => derive_enum_trace(item),
         _ => manyhow::bail!("Collectable can only derived on structs and enums"),
     }
 }
@@ -79,19 +79,19 @@ fn derive_struct_trace(
         fields,
         ..
     }: syn::ItemStruct,
-) -> TokenStream {
+) -> manyhow::Result {
     require_trace_for_generics(&mut generics);
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
-    let fields_and_types = fields
-        .iter()
-        .enumerate()
-        .map(|(index, field)| {
+    let mut fields_and_types = Vec::new();
+    for (index, field) in fields.iter().enumerate() {
+        let field_attr = TraceFieldAttr::from_attributes(&field.attrs)?;
+        if !field_attr.ignore {
             let field_accessor = field_accessor(field, index);
 
-            (field_accessor, field.ty.clone())
-        })
-        .collect::<Vec<_>>();
+            fields_and_types.push((field_accessor, field.ty.clone()));
+        }
+    }
 
     let types = fields_and_types
         .iter()
@@ -108,7 +108,7 @@ fn derive_struct_trace(
         quote! {refuse::Trace::trace(&self.#field, tracer)}
     });
 
-    quote! {
+    Ok(quote! {
         impl #impl_gen refuse::Trace for #ident #type_gen #where_clause {
             const MAY_CONTAIN_REFERENCES: bool = #may_contain_refs;
 
@@ -116,7 +116,7 @@ fn derive_struct_trace(
                 #(#traces;)*
             }
         }
-    }
+    })
 }
 
 fn require_trace_for_generics(generics: &mut Generics) {
@@ -145,43 +145,61 @@ fn derive_enum_trace(
         variants,
         ..
     }: syn::ItemEnum,
-) -> TokenStream {
+) -> manyhow::Result {
     require_trace_for_generics(&mut generics);
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
 
     let mut all_types = HashSet::new();
-    let traces = variants
-        .iter()
-        .map(|syn::Variant { ident, fields, .. }| match fields {
-            syn::Fields::Named(fields) => {
-                let mut field_names = Vec::new();
-                for field in &fields.named {
-                    all_types.insert(field.ty.clone());
+    let mut traces = Vec::new();
 
-                    let name = field.ident.clone().expect("name missing");
+    for syn::Variant {
+        ident,
+        fields,
+        attrs,
+        ..
+    } in &variants
+    {
+        let field_attr = TraceFieldAttr::from_attributes(attrs)?;
+        if !field_attr.ignore {
+            let trace = match fields {
+                syn::Fields::Named(fields) => {
+                    let mut field_names = Vec::new();
+                    for field in &fields.named {
+                        let field_attr = TraceFieldAttr::from_attributes(&field.attrs)?;
+                        if !field_attr.ignore {
+                            all_types.insert(field.ty.clone());
 
-                    field_names.push(name);
+                            let name = field.ident.clone().expect("name missing");
+
+                            field_names.push(name);
+                        }
+                    }
+                    quote! {Self::#ident { #(#field_names,)* } => {
+                        #(refuse::Trace::trace(#field_names, tracer);)*
+                    }}
                 }
-                quote! {Self::#ident { #(#field_names,)* } => {
-                    #(refuse::Trace::trace(#field_names, tracer);)*
-                }}
-            }
-            syn::Fields::Unnamed(fields) => {
-                let mut field_names = Vec::new();
-                for (index, field) in fields.unnamed.iter().enumerate() {
-                    all_types.insert(field.ty.clone());
+                syn::Fields::Unnamed(fields) => {
+                    let mut field_names = Vec::new();
+                    for (index, field) in fields.unnamed.iter().enumerate() {
+                        let field_attr = TraceFieldAttr::from_attributes(&field.attrs)?;
+                        if !field_attr.ignore {
+                            all_types.insert(field.ty.clone());
 
-                    field_names.push(syn::Ident::new(&format!("f{index}"), Span::call_site()));
+                            field_names
+                                .push(syn::Ident::new(&format!("f{index}"), Span::call_site()));
+                        }
+                    }
+                    quote! {Self::#ident ( #(#field_names,)* ) => {
+                        #(refuse::Trace::trace(#field_names, tracer);)*
+                    }}
                 }
-                quote! {Self::#ident ( #(#field_names,)* ) => {
-                    #(refuse::Trace::trace(#field_names, tracer);)*
-                }}
-            }
-            syn::Fields::Unit => {
-                quote! {Self::#ident => {}}
-            }
-        })
-        .collect::<Vec<_>>();
+                syn::Fields::Unit => {
+                    quote! {Self::#ident => {}}
+                }
+            };
+            traces.push(trace);
+        }
+    }
 
     let type_mays = all_types
         .into_iter()
@@ -189,18 +207,24 @@ fn derive_enum_trace(
     let may_contain_refs = quote! {
         #(#type_mays |)* false
     };
-
-    quote! {
+    let traces = if traces.is_empty() {
+        TokenStream::default()
+    } else {
+        quote!(
+            match self {
+                #(#traces)*
+            }
+        )
+    };
+    Ok(quote! {
         impl #impl_gen refuse::Trace for #enum_name #type_gen #where_clause {
             const MAY_CONTAIN_REFERENCES: bool = #may_contain_refs;
 
             fn trace(&self, tracer: &mut refuse::Tracer) {
-                match self {
-                    #(#traces)*
-                }
+                #traces
             }
         }
-    }
+    })
 }
 
 #[derive(FromAttr)]
@@ -208,4 +232,10 @@ fn derive_enum_trace(
 struct MapAsAttr {
     target: Option<syn::Type>,
     map: Option<syn::Expr>,
+}
+
+#[derive(FromAttr)]
+#[attribute(ident = trace)]
+struct TraceFieldAttr {
+    ignore: bool,
 }
