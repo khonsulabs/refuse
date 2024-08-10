@@ -160,9 +160,11 @@ fn derive_enum_trace(
     } in &variants
     {
         let field_attr = TraceFieldAttr::from_attributes(attrs)?;
-        if !field_attr.ignore {
-            let trace = match fields {
-                syn::Fields::Named(fields) => {
+        let trace = match fields {
+            syn::Fields::Named(fields) => {
+                if field_attr.ignore {
+                    quote!(Self::#ident { .. } => {})
+                } else {
                     let mut field_names = Vec::new();
                     for field in &fields.named {
                         let field_attr = TraceFieldAttr::from_attributes(&field.attrs)?;
@@ -178,7 +180,11 @@ fn derive_enum_trace(
                         #(refuse::Trace::trace(#field_names, tracer);)*
                     }}
                 }
-                syn::Fields::Unnamed(fields) => {
+            }
+            syn::Fields::Unnamed(fields) => {
+                if field_attr.ignore {
+                    quote!(Self::#ident(..) => {})
+                } else {
                     let mut field_names = Vec::new();
                     for (index, field) in fields.unnamed.iter().enumerate() {
                         let field_attr = TraceFieldAttr::from_attributes(&field.attrs)?;
@@ -193,12 +199,12 @@ fn derive_enum_trace(
                         #(refuse::Trace::trace(#field_names, tracer);)*
                     }}
                 }
-                syn::Fields::Unit => {
-                    quote! {Self::#ident => {}}
-                }
-            };
-            traces.push(trace);
-        }
+            }
+            syn::Fields::Unit => {
+                quote! {Self::#ident => {}}
+            }
+        };
+        traces.push(trace);
     }
 
     let type_mays = all_types
