@@ -1,6 +1,6 @@
 [package]
 name = "refuse-pool"
-version = "0.0.4"
+version = "0.0.5"
 description = "A string interner utilizing the Refuse garbage collector"
 edition = "2021"
 rust-version = "1.73.0"
@@ -10,7 +10,7 @@ categories = ["memory-management"]
 keywords = ["symbols", "string-interner", "interner"]
 
 [dependencies]
-refuse = { path = "../", version = "=0.0.4" }
+refuse = { path = "../", version = "=0.0.5" }
 ahash = { version = "0.8.11", default-features = false, features = [
     "runtime-rng",
 ] }
