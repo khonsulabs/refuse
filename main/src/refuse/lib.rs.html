@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-d10b2a06af903387.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.82.0-nightly (ca5d25e2c 2024-08-09)" data-channel="nightly" data-search-js="search-ef54e092fea9c776.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-04a29ac50d05d0b1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-d10b2a06af903387.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="refuse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.82.0-nightly (730d5d409 2024-08-10)" data-channel="nightly" data-search-js="search-ef54e092fea9c776.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-04a29ac50d05d0b1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -3088,6 +3088,21 @@
 <a href="#3088" id="3088">3088</a>
 <a href="#3089" id="3089">3089</a>
 <a href="#3090" id="3090">3090</a>
+<a href="#3091" id="3091">3091</a>
+<a href="#3092" id="3092">3092</a>
+<a href="#3093" id="3093">3093</a>
+<a href="#3094" id="3094">3094</a>
+<a href="#3095" id="3095">3095</a>
+<a href="#3096" id="3096">3096</a>
+<a href="#3097" id="3097">3097</a>
+<a href="#3098" id="3098">3098</a>
+<a href="#3099" id="3099">3099</a>
+<a href="#3100" id="3100">3100</a>
+<a href="#3101" id="3101">3101</a>
+<a href="#3102" id="3102">3102</a>
+<a href="#3103" id="3103">3103</a>
+<a href="#3104" id="3104">3104</a>
+<a href="#3105" id="3105">3105</a>
 </pre></div><pre class="rust"><code><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">"../README.md"</span>)]
 
 </span><span class="kw">use </span>core::slice;
@@ -3738,7 +3753,7 @@
     }
 
     <span class="kw">fn </span>release_thread_guard() {
-        <span class="self">Self</span>::map_current(<span class="self">Self</span>::release_guard)
+        <span class="self">Self</span>::map_current(<span class="self">Self</span>::release_guard);
     }
 
     <span class="kw">fn </span>push_guard(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
@@ -4120,6 +4135,7 @@
     ///
     /// If any other guards are currently held by this thread, this function
     /// does nothing.
+    </span><span class="attr">#[allow(clippy::redundant_closure_for_method_calls)] </span><span class="comment">// produces compiler error
     </span><span class="kw">pub fn </span>yield_to_collector(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.coordinated_yield(|yielder| yielder.wait());
     }
@@ -4146,11 +4162,17 @@
     ///
     /// If any other guards are currently held by this thread, this function
     /// does nothing.
-    </span><span class="kw">pub fn </span>coordinated_yield(<span class="kw-2">&amp;mut </span><span class="self">self</span>, yielder: <span class="kw">impl </span>FnOnce(Yielder&lt;<span class="lifetime">'_</span>&gt;) -&gt; YieldComplete) {
+    </span><span class="kw">pub fn </span>coordinated_yield(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        yielder: <span class="kw">impl </span>FnOnce(Yielder&lt;<span class="lifetime">'_</span>&gt;) -&gt; YieldComplete,
+    ) -&gt; bool {
         <span class="comment">// We only need to attempt yielding if we are the outermost guard.
         </span><span class="kw">if </span>ThreadPool::current_depth() == <span class="number">1 </span>&amp;&amp; <span class="self">self</span>.collector.release_reader_if_collecting() {
-            <span class="kw">let </span>YieldComplete = yielder(Yielder(<span class="kw-2">&amp;mut </span><span class="self">self</span>.collector));
-        }
+            <span class="kw">let </span>_complete: YieldComplete = yielder(Yielder(<span class="kw-2">&amp;mut </span><span class="self">self</span>.collector));
+            <span class="bool-val">true
+        </span>} <span class="kw">else </span>{
+            <span class="bool-val">false
+        </span>}
     }
 
     <span class="doccomment">/// Executes `unlocked` while this guard is temporarily released.
@@ -4212,15 +4234,18 @@
 
 <span class="kw">impl </span>Yielder&lt;<span class="lifetime">'_</span>&gt; {
     <span class="doccomment">/// Waits for the garbage collector to finish the current collection.
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>wait(<span class="self">self</span>) -&gt; YieldComplete {
         <span class="self">self</span>.<span class="number">0</span>.acquire_reader();
-        YieldComplete
+        YieldComplete { _priv: PhantomData }
     }
 }
 
 <span class="doccomment">/// A marker indicating that a [coordinated
 /// yield](CollectionGuard::coordinated_yield) has completed.
-</span><span class="kw">pub struct </span>YieldComplete;
+</span><span class="kw">pub struct </span>YieldComplete {
+    _priv: PhantomData&lt;()&gt;,
+}
 
 <span class="doccomment">/// A type that can be garbage collected.
 ///
@@ -4661,7 +4686,7 @@
 
     <span class="doccomment">/// Stores `value` in the garbage collector, returning a root reference to
     /// the data.
-    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'a</span>&gt;(value: T, guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'a</span>&gt;(value: T, guard: <span class="kw-2">&amp;</span><span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>guard = guard.as_ref();
         <span class="kw">let </span>(type_index, gen, bin) = guard.adopt(Rooted::root(value));
         <span class="self">Self</span>::from_parts(type_index, gen, bin, guard)
@@ -4674,10 +4699,10 @@
     /// Returns `Err(root)` if `root` does not contain a `T`.
     </span><span class="kw">pub fn </span>try_from_any&lt;<span class="lifetime">'a</span>&gt;(
         root: AnyRoot,
-        guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;,
+        guard: <span class="kw-2">&amp;</span><span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, AnyRoot&gt; {
         <span class="kw">if </span>TypeIndex::of::&lt;T&gt;() == root.any.type_index {
-            <span class="kw">let </span>slot = root.any.load_slot(guard.as_ref()).expect(<span class="string">"root missing"</span>);
+            <span class="kw">let </span>slot = root.any.load_slot(guard.as_ref()).assert(<span class="string">"root missing"</span>);
             <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
                 data: slot,
                 reference: root.any.downcast_ref(),
@@ -4720,6 +4745,7 @@
     }
 
     <span class="doccomment">/// Returns this root as an untyped root.
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>into_any_root(<span class="self">self</span>) -&gt; AnyRoot {
         <span class="comment">// We transfer ownership of this reference to the AnyRoot, so we want to
         // avoid calling drop on `self`.
@@ -4862,7 +4888,7 @@
     </span>T: Collectable + Hash,
 {
     <span class="kw">fn </span>hash&lt;H: std::hash::Hasher&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, state: <span class="kw-2">&amp;mut </span>H) {
-        (<span class="kw-2">**</span><span class="self">self</span>).hash(state)
+        (<span class="kw-2">**</span><span class="self">self</span>).hash(state);
     }
 }
 
@@ -4946,7 +4972,7 @@
 {
     <span class="doccomment">/// Stores `value` in the garbage collector, returning a "weak" reference to
     /// it.
-    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'a</span>&gt;(value: T, guard: <span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new&lt;<span class="lifetime">'a</span>&gt;(value: T, guard: <span class="kw-2">&amp;</span><span class="kw">impl </span>AsRef&lt;CollectionGuard&lt;<span class="lifetime">'a</span>&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>guard = guard.as_ref();
         <span class="kw">let </span>(type_index, slot_generation, bin_id) = guard.adopt(Rooted::reference(value));
 
@@ -5348,7 +5374,7 @@
             </span><span class="kw">let </span>slot = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>slot.value.get()).allocated };
             slot.roots.fetch_add(<span class="number">1</span>, Ordering::Relaxed);
             <span class="prelude-val">Some</span>(AnyRoot {
-                rooted: (<span class="kw-2">&amp;**</span>slot) <span class="kw">as </span><span class="kw-2">*const </span>Rooted&lt;T&gt; <span class="kw">as </span><span class="kw-2">*const </span>(),
+                rooted: <span class="macro">std::ptr::addr_of!</span>(<span class="kw-2">**</span>slot).cast::&lt;()&gt;(),
                 roots: <span class="kw-2">&amp;</span>slot.roots,
                 any: AnyRef {
                     bin_id,
@@ -5771,7 +5797,7 @@
 /// yielding by the current thread when invoked. If a guard is held, consider
 /// calling [`CollectionGuard::collect()`] instead.
 </span><span class="kw">pub fn </span>collect() {
-    try_collect().unwrap()
+    try_collect().unwrap();
 }
 
 <span class="doccomment">/// Invokes the garbage collector.
@@ -5856,6 +5882,7 @@
 <span class="kw">impl </span>AnyRoot {
     <span class="doccomment">/// Loads a reference to the underlying data. Returns `None` if `T` is not
     /// the type of the underlying data.
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>load&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt;
     <span class="kw">where
         </span>T: Collectable,
@@ -5873,6 +5900,7 @@
     }
 
     <span class="doccomment">/// Returns a [`Root&lt;T&gt;`] if the underlying reference points to a `T`.
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub fn </span>downcast_root&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Root&lt;T&gt;&gt;
     <span class="kw">where
         </span>T: Collectable,
@@ -5900,6 +5928,7 @@
     ///
     /// This function does not do any type checking. If `T` is not the correct
     /// type, attempting to load the underyling value will fail.
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub const fn </span>downcast_ref&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Ref&lt;T&gt;
     <span class="kw">where
         </span>T: Collectable,
@@ -5917,6 +5946,7 @@
     }
 
     <span class="doccomment">/// Returns an untyped "weak" reference to this root.
+    </span><span class="attr">#[must_use]
     </span><span class="kw">pub const fn </span>as_any(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AnyRef {
         <span class="self">self</span>.any
     }

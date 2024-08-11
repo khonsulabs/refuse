@@ -1,1 +1,1 @@
-searchState.loadedDescShard("refuse_macros", 0, "Macros for the Refuse garbage collector.")
+searchState.loadedDescShard("refuse_macros", 0, "Macros for the Refuse garbage collector.\nDerives the <code>refuse::MapAs</code> trait for a given struct or enum.\nDerives the <code>refuse::Trace</code> trait for a given struct or enum.")
