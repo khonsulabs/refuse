@@ -3,7 +3,7 @@
 [package]
 name = "refuse"
 description = "An easy-to-use, incremental, multi-threaded garbage collector"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2021"
 rust-version = "1.73.0"
 repository = "https://github.com/khonsulabs/refuse"
@@ -17,7 +17,7 @@ flume = "0.11.0"
 intentional = "0.1.1"
 kempt = "0.2.4"
 parking_lot = { workspace = true }
-refuse-macros = { path = "./refuse-macros", version = "=0.0.5" }
+refuse-macros = { path = "./refuse-macros", version = "=0.0.6" }
 
 [lints]
 workspace = true
