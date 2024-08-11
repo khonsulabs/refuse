@@ -9,6 +9,9 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{GenericParam, Generics, Lifetime, TraitBound};
 
+/// Derives the `refuse::MapAs` trait for a given struct or enum.
+///
+/// This macro expects the identifier `refuse` to refer to the crate.
 #[manyhow]
 #[proc_macro_derive(MapAs, attributes(map_as))]
 pub fn derive_map_as(input: syn::Item) -> manyhow::Result {
@@ -53,6 +56,9 @@ fn derive_map_as_inner(
     }
 }
 
+/// Derives the `refuse::Trace` trait for a given struct or enum.
+///
+/// This macro expects the identifier `refuse` to refer to the crate.
 #[manyhow]
 #[proc_macro_derive(Trace, attributes(trace))]
 pub fn derive_trace(input: syn::Item) -> manyhow::Result {

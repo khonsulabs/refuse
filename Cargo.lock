@@ -752,6 +752,7 @@ version = "0.0.5"
 dependencies = [
  "ahash",
  "hashbrown",
+ "parking_lot",
  "refuse",
 ]
 

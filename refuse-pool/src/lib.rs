@@ -40,10 +40,11 @@ use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 use ahash::AHasher;
 use hashbrown::{hash_table, HashTable};
+use parking_lot::Mutex;
 use refuse::{AnyRef, AnyRoot, CollectionGuard, LocalPool, Ref, Root, SimpleType, Trace};
 
 enum PoolEntry {
@@ -92,7 +93,7 @@ impl StringPool {
         let hash = hash_str(key.as_ref());
         match self
             .strings
-            .entry(hash, |a| a.equals(&key, guard), |e| e.hash())
+            .entry(hash, |a| a.equals(&key, guard), PoolEntry::hash)
         {
             hash_table::Entry::Occupied(entry) => {
                 let entry = entry.into_mut();
@@ -149,22 +150,25 @@ impl RootString {
     ///
     /// If another [`RootString`] or [`RefString`] exists already with the same
     /// contents as `s`, it will be returned and `s` will be dropped.
-    pub fn new<'a>(s: impl Into<Cow<'a, str>>, guard: impl AsRef<CollectionGuard<'a>>) -> Self {
-        let mut pool = StringPool::global().lock().expect("poisoned");
+    pub fn new<'a>(s: impl Into<Cow<'a, str>>, guard: &impl AsRef<CollectionGuard<'a>>) -> Self {
+        let mut pool = StringPool::global().lock();
         pool.intern(s.into(), guard.as_ref()).clone()
     }
 
     /// Returns a reference to this root string.
+    #[must_use]
     pub const fn downgrade(&self) -> RefString {
         RefString(self.0.downgrade())
     }
 
     /// Returns a typeless reference to this string.
+    #[must_use]
     pub const fn downgrade_any(&self) -> AnyRef {
         self.0.downgrade_any()
     }
 
     /// Returns the number of root references to this string, `self` included.
+    #[must_use]
     pub fn root_count(&self) -> u64 {
         // We subtract one because the string pool always contains a reference.
         // Including it in the publicly viewable count would just lead to
@@ -180,7 +184,7 @@ impl RootString {
     /// Returns `Err(root)` if `root` does not contain a pooled string.
     pub fn try_from_any<'a>(
         root: AnyRoot,
-        guard: impl AsRef<CollectionGuard<'a>>,
+        guard: &impl AsRef<CollectionGuard<'a>>,
     ) -> Result<Self, AnyRoot> {
         Root::try_from_any(root, guard).map(Self)
     }
@@ -191,7 +195,7 @@ impl Drop for RootString {
         if self.0.root_count() == 2 {
             // This is the last `RootString` aside from the one stored in the
             // pool, so we should remove the pool entry.
-            let mut pool = StringPool::global().lock().expect("poisoned");
+            let mut pool = StringPool::global().lock();
             let entry = pool
                 .strings
                 .find_entry(self.0.hash, |s| s == &self.0)
@@ -345,7 +349,7 @@ impl RefString {
     /// contents as `s`, it will be returned and `s` will be dropped.
     pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
         let guard = CollectionGuard::acquire();
-        let mut pool = StringPool::global().lock().expect("poisoned");
+        let mut pool = StringPool::global().lock();
         pool.intern(s.into(), &guard).downgrade()
     }
 
@@ -358,16 +362,19 @@ impl RefString {
 
     /// Loads a reference to the underlying string, if the string hasn't been
     /// freed.
+    #[must_use]
     pub fn load<'guard>(&self, guard: &'guard CollectionGuard) -> Option<&'guard str> {
         self.0.load(guard).map(|pooled| &*pooled.string)
     }
 
     /// Loads this string as a root, if the string hasn't been freed.
+    #[must_use]
     pub fn as_root(&self, guard: &CollectionGuard) -> Option<RootString> {
         self.0.as_root(guard).map(RootString)
     }
 
     /// Returns a typeless reference to this string.
+    #[must_use]
     pub fn as_any(&self) -> AnyRef {
         self.0.as_any()
     }

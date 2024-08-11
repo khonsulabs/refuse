@@ -648,7 +648,7 @@ impl ThreadPool {
     }
 
     fn release_thread_guard() {
-        Self::map_current(Self::release_guard)
+        Self::map_current(Self::release_guard);
     }
 
     fn push_guard(&self) -> usize {
@@ -1030,6 +1030,7 @@ impl CollectionGuard<'_> {
     ///
     /// If any other guards are currently held by this thread, this function
     /// does nothing.
+    #[allow(clippy::redundant_closure_for_method_calls)] // produces compiler error
     pub fn yield_to_collector(&mut self) {
         self.coordinated_yield(|yielder| yielder.wait());
     }
@@ -1056,10 +1057,16 @@ impl CollectionGuard<'_> {
     ///
     /// If any other guards are currently held by this thread, this function
     /// does nothing.
-    pub fn coordinated_yield(&mut self, yielder: impl FnOnce(Yielder<'_>) -> YieldComplete) {
+    pub fn coordinated_yield(
+        &mut self,
+        yielder: impl FnOnce(Yielder<'_>) -> YieldComplete,
+    ) -> bool {
         // We only need to attempt yielding if we are the outermost guard.
         if ThreadPool::current_depth() == 1 && self.collector.release_reader_if_collecting() {
-            let YieldComplete = yielder(Yielder(&mut self.collector));
+            let _complete: YieldComplete = yielder(Yielder(&mut self.collector));
+            true
+        } else {
+            false
         }
     }
 
@@ -1122,15 +1129,18 @@ pub struct Yielder<'a>(&'a mut CollectorReadGuard);
 
 impl Yielder<'_> {
     /// Waits for the garbage collector to finish the current collection.
+    #[must_use]
     pub fn wait(self) -> YieldComplete {
         self.0.acquire_reader();
-        YieldComplete
+        YieldComplete { _priv: PhantomData }
     }
 }
 
 /// A marker indicating that a [coordinated
 /// yield](CollectionGuard::coordinated_yield) has completed.
-pub struct YieldComplete;
+pub struct YieldComplete {
+    _priv: PhantomData<()>,
+}
 
 /// A type that can be garbage collected.
 ///
@@ -1571,7 +1581,7 @@ where
 
     /// Stores `value` in the garbage collector, returning a root reference to
     /// the data.
-    pub fn new<'a>(value: T, guard: impl AsRef<CollectionGuard<'a>>) -> Self {
+    pub fn new<'a>(value: T, guard: &impl AsRef<CollectionGuard<'a>>) -> Self {
         let guard = guard.as_ref();
         let (type_index, gen, bin) = guard.adopt(Rooted::root(value));
         Self::from_parts(type_index, gen, bin, guard)
@@ -1584,10 +1594,10 @@ where
     /// Returns `Err(root)` if `root` does not contain a `T`.
     pub fn try_from_any<'a>(
         root: AnyRoot,
-        guard: impl AsRef<CollectionGuard<'a>>,
+        guard: &impl AsRef<CollectionGuard<'a>>,
     ) -> Result<Self, AnyRoot> {
         if TypeIndex::of::<T>() == root.any.type_index {
-            let slot = root.any.load_slot(guard.as_ref()).expect("root missing");
+            let slot = root.any.load_slot(guard.as_ref()).assert("root missing");
             Ok(Self {
                 data: slot,
                 reference: root.any.downcast_ref(),
@@ -1630,6 +1640,7 @@ where
     }
 
     /// Returns this root as an untyped root.
+    #[must_use]
     pub fn into_any_root(self) -> AnyRoot {
         // We transfer ownership of this reference to the AnyRoot, so we want to
         // avoid calling drop on `self`.
@@ -1772,7 +1783,7 @@ where
     T: Collectable + Hash,
 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (**self).hash(state)
+        (**self).hash(state);
     }
 }
 
@@ -1856,7 +1867,7 @@ where
 {
     /// Stores `value` in the garbage collector, returning a "weak" reference to
     /// it.
-    pub fn new<'a>(value: T, guard: impl AsRef<CollectionGuard<'a>>) -> Self {
+    pub fn new<'a>(value: T, guard: &impl AsRef<CollectionGuard<'a>>) -> Self {
         let guard = guard.as_ref();
         let (type_index, slot_generation, bin_id) = guard.adopt(Rooted::reference(value));
 
@@ -2258,7 +2269,7 @@ where
             let slot = unsafe { &(*slot.value.get()).allocated };
             slot.roots.fetch_add(1, Ordering::Relaxed);
             Some(AnyRoot {
-                rooted: (&**slot) as *const Rooted<T> as *const (),
+                rooted: std::ptr::addr_of!(**slot).cast::<()>(),
                 roots: &slot.roots,
                 any: AnyRef {
                     bin_id,
@@ -2681,7 +2692,7 @@ enum SlotSweepStatus {
 /// yielding by the current thread when invoked. If a guard is held, consider
 /// calling [`CollectionGuard::collect()`] instead.
 pub fn collect() {
-    try_collect().unwrap()
+    try_collect().unwrap();
 }
 
 /// Invokes the garbage collector.
@@ -2766,6 +2777,7 @@ pub struct AnyRoot {
 impl AnyRoot {
     /// Loads a reference to the underlying data. Returns `None` if `T` is not
     /// the type of the underlying data.
+    #[must_use]
     pub fn load<T>(&self) -> Option<&T>
     where
         T: Collectable,
@@ -2783,6 +2795,7 @@ impl AnyRoot {
     }
 
     /// Returns a [`Root<T>`] if the underlying reference points to a `T`.
+    #[must_use]
     pub fn downcast_root<T>(&self) -> Option<Root<T>>
     where
         T: Collectable,
@@ -2810,6 +2823,7 @@ impl AnyRoot {
     ///
     /// This function does not do any type checking. If `T` is not the correct
     /// type, attempting to load the underyling value will fail.
+    #[must_use]
     pub const fn downcast_ref<T>(&self) -> Ref<T>
     where
         T: Collectable,
@@ -2827,6 +2841,7 @@ impl AnyRoot {
     }
 
     /// Returns an untyped "weak" reference to this root.
+    #[must_use]
     pub const fn as_any(&self) -> AnyRef {
         self.any
     }
