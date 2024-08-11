@@ -89,8 +89,7 @@ impl StringPool {
         POOL.get_or_init(Mutex::default)
     }
 
-    fn intern(&mut self, key: Cow<'_, str>, guard: &CollectionGuard) -> &RootString {
-        let hash = hash_str(key.as_ref());
+    fn intern(&mut self, key: Cow<'_, str>, hash: u64, guard: &CollectionGuard) -> &RootString {
         match self
             .strings
             .entry(hash, |a| a.equals(&key, guard), PoolEntry::hash)
@@ -151,8 +150,10 @@ impl RootString {
     /// If another [`RootString`] or [`RefString`] exists already with the same
     /// contents as `s`, it will be returned and `s` will be dropped.
     pub fn new<'a>(s: impl Into<Cow<'a, str>>, guard: &impl AsRef<CollectionGuard<'a>>) -> Self {
+        let s = s.into();
+        let hash = hash_str(&s);
         let mut pool = StringPool::global().lock();
-        pool.intern(s.into(), guard.as_ref()).clone()
+        pool.intern(s, hash, guard.as_ref()).clone()
     }
 
     /// Returns a reference to this root string.
@@ -348,9 +349,11 @@ impl RefString {
     /// If another [`RootString`] or [`RefString`] exists already with the same
     /// contents as `s`, it will be returned and `s` will be dropped.
     pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
+        let s = s.into();
+        let hash = hash_str(&s);
         let guard = CollectionGuard::acquire();
         let mut pool = StringPool::global().lock();
-        pool.intern(s.into(), &guard).downgrade()
+        pool.intern(s, hash, &guard).downgrade()
     }
 
     /// Upgrades a typeless reference to a pooled string reference.
